@@ -136,7 +136,7 @@ create table if not exists public.push_config (key text primary key, value text 
 alter table public.push_config enable row level security;
 revoke all on public.push_config from anon, authenticated;
 insert into public.push_config(key, value) values ('cron_secret', md5(random()::text || clock_timestamp()::text) || md5(random()::text)) on conflict (key) do nothing;
-insert into public.push_config(key, value) values ('function_url', 'https://rpmyvbxjicipfqipawkw.supabase.co/functions/v1/spozli-push') on conflict (key) do nothing;
+insert into public.push_config(key, value) values ('function_url', 'https://rpmyvbxjicipfqipawkw.supabase.co/functions/v1/smooth-task') on conflict (key) do nothing;
 
 create table if not exists public.push_log (key text primary key, sent_at timestamptz not null default now());
 alter table public.push_log enable row level security;

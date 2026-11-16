@@ -1,7 +1,7 @@
 // Echte Push-Nachrichten (Web Push). Auf dem iPhone nur in der installierten App (Home-Bildschirm).
 import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
 
-export const FN_URL = `${SUPABASE_URL}/functions/v1/spozli-push`;
+export const FN_URL = `${SUPABASE_URL}/functions/v1/smooth-task`;
 const HEADERS = { 'Content-Type': 'application/json', apikey: SUPABASE_KEY };
 
 export const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
