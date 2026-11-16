@@ -434,3 +434,17 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-conten
   .dbar-btns{display:flex;gap:8px;margin-left:auto}
 }
 @media (min-width:1500px){.dgrid{grid-template-columns:repeat(4,minmax(0,1fr))}.dtile.w4{grid-column:span 4}}
+/* Mehrtägige Termine als durchgehender Balken */
+.day{overflow:visible}
+.mchs{overflow:visible}
+.mch{height:calc(9.5px*1.3*2 + 2px);flex:0 0 auto}
+.mch.ph{visibility:hidden;pointer-events:none}
+.mch.mspan{position:relative;z-index:1;width:calc(var(--span)*100% + (var(--span) - 1)*4px);-webkit-line-clamp:2;background:color-mix(in srgb,var(--cat) 28%,var(--surface))}
+.mch.mspan.cl{border-left:0;border-top-left-radius:0;border-bottom-left-radius:0}
+.mch.mspan.cr{border-top-right-radius:0;border-bottom-right-radius:0}
+.mch.mspan{margin:0}
+.gall .cell{overflow:visible}
+.gchip.ph{visibility:hidden;min-height:19px}
+.gchip.mspan{position:relative;z-index:1;width:calc(var(--span)*100% + (var(--span) - 1)*5px)}
+.gchip.mspan.cl{border-top-left-radius:0;border-bottom-left-radius:0}
+.gchip.mspan.cr{border-top-right-radius:0;border-bottom-right-radius:0}

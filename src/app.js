@@ -389,7 +389,7 @@ function renderHome(){
   const next=todays.find(ev=>ev.allday||ev.time>=nowHM);
   const rems=F.cal?upcomingReminders(14):[];
   const big=!F.cal?'Schön, dass du da bist':next?`Als Nächstes: ${esc(next.title)}${next.allday?'':' um '+next.time}`:todays.length?'Für heute ist alles erledigt':'Heute steht nichts an';
-  const soon=[];for(let i=0;i<=2&&soon.length<4;i++){const d=addDays(TODAY,i);eventsOn(d).forEach(ev=>{if(soon.length<4)soon.push([ev,d])})}
+  const soon=[];{const ok=onceMulti();for(let i=0;i<=2&&soon.length<4;i++){const d=addDays(TODAY,i);eventsOn(d).forEach(ev=>{if(soon.length<4&&ok(ev,d))soon.push([ev,d])})}}
   const stats=[F.cal&&`<button class="stat" data-go="cal"><b>${todays.length}</b><span>Termine heute</span></button>`,F.shop&&`<button class="stat" data-go="shop"><b>${S.list.length}</b><span>Auf der Liste</span></button>`,F.cal&&`<button class="stat" data-go="rem"><b>${rems.filter(r=>r.t-Date.now()<864e5).length}</b><span>Erinnerungen 24 h</span></button>`,!F.cal&&F.todo&&`<button class="stat" data-go="todo"><b>${(S.todos||[]).filter(t=>!t.done&&t.due&&t.due<=TODAY).length}</b><span>To-dos heute</span></button>`,!F.cal&&F.habits&&habitPct()!==null&&`<button class="stat" data-go="habits"><b>${habitPct()}%</b><span>Habits</span></button>`].filter(Boolean);
   const quick=[F.cal&&'<button data-quick="ev">+ Termin</button>',F.shop&&'<button data-quick="item">+ Artikel</button>',F.countdown&&!F.shop&&'<button data-cd="new">+ Countdown</button>'].filter(Boolean);
   return `<section class="hero"><div class="lab">Heute</div><div class="big">${big}</div>
@@ -643,7 +643,11 @@ function renderGrid(n){
   days.forEach(d=>{
     const evs=eventsOn(d);
     head+=`<button data-day="${d}" class="${d===TODAY?'today':''} ${d===S.sel&&n>1?'sel':''}">${wd(d)}<b>${fromIso(d).getDate()}</b></button>`;
-    all+=`<div class="cell">${evs.filter(e=>e.allday||spanOf(e)).map(ev=>`<button class="gchip" style="--cat:var(${CATS[ev.cat].v})" data-ev="${ev.id}" data-d="${d}">${esc(T(ev,d))}</button>`).join('')}</div>`;
+    {const top=evs.filter(e=>e.allday||spanOf(e)).sort((x,y)=>(spanOf(y)?1:0)-(spanOf(x)?1:0)||(spanOf(x)&&spanOf(y)?startOfOcc(x,d).localeCompare(startOfOcc(y,d)):0));const ci=days.indexOf(d);
+    all+=`<div class="cell">${top.map(ev=>{if(!spanOf(ev))return `<button class="gchip" style="--cat:var(${CATS[ev.cat].v})" data-ev="${ev.id}" data-d="${d}">${esc(T(ev,d))}</button>`;
+      const so=startOfOcc(ev,d);if(so!==d&&ci>0)return '<span class="gchip ph"></span>';
+      const end=addDays(so,spanOf(ev));let n=1;while(ci+n<days.length&&days[ci+n]<=end)n++;
+      return `<button class="gchip mspan${so<d?' cl':''}${end>days[ci+n-1]?' cr':''}" style="--cat:var(${CATS[ev.cat].v});--span:${n}" data-ev="${ev.id}" data-d="${d}">${CATS[ev.cat].sym}${esc(ev.title)}</button>`}).join('')}</div>`}
     const timed=evs.filter(e=>!e.allday&&!spanOf(e)).map(ev=>{const a=toMin(ev.time);let b=ev.end?toMin(ev.end):a+S.prefs.defDur;if(b<=a)b=a+S.prefs.defDur;return {ev,a,b}}).sort((x,y)=>x.a-y.a);
     const lanes=[];timed.forEach(t=>{let l=lanes.findIndex(e=>e<=t.a);if(l<0){l=lanes.length;lanes.push(0)}lanes[l]=t.b;t.l=l});
     const L=Math.max(1,lanes.length);
@@ -662,7 +666,8 @@ function renderGrid(n){
 }
 function renderAgenda(){
   let h='<!--FILTERS-->',cnt=0,lastKw=null;
-  for(let i=0;i<45;i++){const d=addDays(S.sel,i);const evs=eventsOn(d);if(!evs.length)continue;cnt++;
+  const ok=onceMulti();
+  for(let i=0;i<45;i++){const d=addDays(S.sel,i);const evs=eventsOn(d).filter(ev=>ok(ev,d));if(!evs.length)continue;cnt++;
     const kw=isoWeek(d);
     h+=`<div class="section-title">${d===TODAY?'Heute':d===addDays(TODAY,1)?'Morgen':fmtDay(d)}<span>${S.prefs.kw&&kw!==lastKw?'KW '+kw:''}</span></div><div class="aday">${evs.map(ev=>evRow(ev,d)).join('')}</div>`;lastKw=kw}
   if(!cnt)h+='<div class="empty">In den nächsten Wochen steht nichts an.</div>';
@@ -673,15 +678,33 @@ function renderMonth(){
   const first=new Date(y,m-1,1);const lead=S.prefs.weekStart===1?(first.getDay()+6)%7:first.getDay();
   const start=iso(new Date(y,m-1,1-lead));
   let cells='';
-  for(let i=0;i<42;i++){
-    const d=addDays(start,i);const dd=fromIso(d);
-    if(i===35&&dd.getMonth()!==m-1)break;
-    const all=eventsOn(d),evs=all.slice(0,2);
-    cells+=`<button class="day${dd.getMonth()!==m-1?' other':''}${d===TODAY?' today':''}${d===S.sel?' sel':''}" data-day="${d}" aria-label="${fmtDay(d)}, ${evs.length} Termine"><span class="n">${dd.getDate()}</span><span class="mchs">${evs.map(ev=>{const mi=multi(ev,d);const wd=(fromIso(d).getDay()+7-S.prefs.weekStart)%7;const cl=mi&&!mi.first&&wd!==0,cr=mi&&!mi.last&&wd!==6;return `<span class="mch${cl?' cl':''}${cr?' cr':''}" style="--cat:var(${CATS[ev.cat].v})" data-ev="${ev.id}" data-d="${d}">${ev.kind==='bday'?'🎂 ':ev.kind==='anniv'?'💍 ':CATS[ev.cat].sym}${cl?'<i class="mcont">'+esc(ev.title)+'</i>':esc(ev.title)}</span>`}).join('')}${all.length>2?`<span class="mmore">+${all.length-2} weitere</span>`:''}</span></button>`;
+  const MAXL=2;
+  for(let w=0;w<6;w++){
+    const ws=addDays(start,w*7);if(w===5&&fromIso(ws).getMonth()!==m-1)break;
+    const days=[...Array(7)].map((_,c)=>addDays(ws,c));const per=days.map(d=>eventsOn(d));
+    // mehrtägige Termine: ein Balken pro Woche
+    const segs=new Map();
+    per.forEach((evs,c)=>evs.forEach(ev=>{if(!spanOf(ev))return;const so=startOfOcc(ev,days[c]);const k=ev.id+'|'+so;
+      if(!segs.has(k))segs.set(k,{ev,so,a:c,b:c,first:so===days[c]});else segs.get(k).b=c}));
+    const list=[...segs.values()].sort((x,y)=>x.a-y.a||(y.b-y.a)-(x.b-x.a));
+    const lanes=[];const grid=days.map(()=>[]);
+    list.forEach(sg=>{let l=0;while(lanes[l]!==undefined&&lanes[l]>=sg.a)l++;lanes[l]=sg.b;for(let c=sg.a;c<=sg.b;c++)grid[c][l]=sg});
+    days.forEach((d,c)=>{const dd=fromIso(d);const slots=grid[c];
+      per[c].filter(ev=>!spanOf(ev)).forEach(ev=>{let l=0;while(slots[l])l++;slots[l]={ev,single:true}});
+      const total=per[c].length;let shown=0,html='';
+      for(let l=0;l<MAXL;l++){const sl=slots[l];
+        if(!sl){if(slots.slice(l+1,MAXL).some(Boolean))html+='<span class="mch ph"></span>';continue}
+        const ev=sl.ev,pre=ev.kind==='bday'?'🎂 ':ev.kind==='anniv'?'💍 ':CATS[ev.cat].sym;shown++;
+        if(sl.single){html+=`<span class="mch" style="--cat:var(${CATS[ev.cat].v})" data-ev="${ev.id}" data-d="${d}">${pre}${esc(ev.title)}</span>`;continue}
+        if(sl.a!==c){html+=`<span class="mch ph" data-ev="${ev.id}" data-d="${d}"></span>`;continue}
+        const n=sl.b-sl.a+1,end=addDays(sl.so,spanOf(ev));
+        html+=`<span class="mch mspan${sl.first?'':' cl'}${end>days[sl.b]?' cr':''}" style="--cat:var(${CATS[ev.cat].v});--span:${n}" data-ev="${ev.id}" data-d="${d}">${pre}${esc(ev.title)}</span>`}
+      const hidden=total-slots.slice(0,MAXL).filter(x=>x).length;
+      cells+=`<button class="day${dd.getMonth()!==m-1?' other':''}${d===TODAY?' today':''}${d===S.sel?' sel':''}" data-day="${d}" aria-label="${fmtDay(d)}, ${total} Termine"><span class="n">${dd.getDate()}</span><span class="mchs">${html}${hidden>0?`<span class="mmore">+${hidden} weitere</span>`:''}</span></button>`});
   }
   const monthName=first.toLocaleDateString('de-DE',{month:'long',year:'numeric'});
   const dayEvs=eventsOn(S.sel);
-  const up=[];for(let i=1;i<=30&&up.length<5;i++){const d=addDays(S.sel,i);eventsOn(d).forEach(ev=>{if(up.length<5)up.push([ev,d])})}
+  const up=[];{const ok=onceMulti();eventsOn(S.sel).forEach(ev=>ok(ev,S.sel));for(let i=1;i<=30&&up.length<5;i++){const d=addDays(S.sel,i);eventsOn(d).forEach(ev=>{if(up.length<5&&ok(ev,d))up.push([ev,d])})}}
   return `<!--FILTERS--><section class="month" style="margin-top:12px"><div class="month-head"><button class="iconbtn" data-mon="-1" aria-label="Voriger Monat">‹</button><h2>${monthName}</h2><div style="display:flex;gap:6px">${S.sel!==TODAY||S.month!==TODAY.slice(0,7)?'<button class="today-btn" data-day="'+TODAY+'">Heute</button>':''}<button class="iconbtn" data-mon="1" aria-label="Nächster Monat">›</button></div></div>
   <div class="grid7">${(S.prefs.weekStart===1?['Mo','Di','Mi','Do','Fr','Sa','So']:['So','Mo','Di','Mi','Do','Fr','Sa']).map(w=>`<div class="wd">${w}</div>`).join('')}${cells}</div>
   <div class="legend">${Object.values(CATS).filter(c=>c.owner===S.user||c.owner==='both').map(c=>`<span class="tag" style="--cat:var(${c.v})">${c.label}</span>`).join('')}</div></section>
@@ -691,12 +714,14 @@ function renderMonth(){
   <div class="agenda">${up.length?up.map(([ev,d])=>evRow(ev,d,true)).join(''):`<div class="empty">In den nächsten 30 Tagen steht nichts an.</div>`}</div>`;
 }
 function evTime(ev,d){const mi=multi(ev,d);if(ev.allday)return 'Ganzt.';if(!mi||mi.first)return ev.time;if(mi.last)return '<span style="font-size:12px">bis</span> '+(ev.end||'');return 'Ganzt.'}
+const onceMulti=()=>{const seen=new Set();return (ev,d)=>{if(!spanOf(ev))return true;const k=ev.id+'|'+startOfOcc(ev,d);if(seen.has(k))return false;seen.add(k);return true}};
+function rangeLabel(ev,d){const s=startOfOcc(ev,d),e=addDays(s,spanOf(ev));const f=x=>fromIso(x).toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'numeric'});return f(s)+' – '+f(e)}
 function evRow(ev,d,withDate){
   const c=CATS[ev.cat];
   const dl=fromIso(d).toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'numeric'});
   return `<button class="ev" style="--cat:var(${c.v})" data-ev="${ev.id}" data-d="${d}">
    <div class="time">${evTime(ev,d)}${withDate?`<small>${dl}</small>`:''}</div>
-   <div style="min-width:0"><div class="t">${c.sym}${esc(T(ev,d))}</div><div class="meta"><span class="tag">${c.label}</span>${multi(ev,d)?`<span>· Tag ${multi(ev,d).i+1}/${multi(ev,d).n}</span>`:''}${c.owner==='both'&&ev.by&&USERS[ev.by]?`<span>· von ${esc(USERS[ev.by].name)}</span>`:''}${ev.kind&&ev.kind!=='event'?`<span>· ${ev.kind==='bday'?'Geburtstag':'Jahrestag'}</span>`:ev.repeat!=='none'?`<span>· ${REPEAT[ev.repeat]}</span>`:''}</div></div>
+   <div style="min-width:0"><div class="t">${c.sym}${esc(T(ev,d))}</div><div class="meta"><span class="tag">${c.label}</span>${multi(ev,d)?`<span>· ${rangeLabel(ev,d)}${multi(ev,d).first?'':' (Tag '+(multi(ev,d).i+1)+'/'+multi(ev,d).n+')'}</span>`:''}${c.owner==='both'&&ev.by&&USERS[ev.by]?`<span>· von ${esc(USERS[ev.by].name)}</span>`:''}${ev.kind&&ev.kind!=='event'?`<span>· ${ev.kind==='bday'?'Geburtstag':'Jahrestag'}</span>`:ev.repeat!=='none'?`<span>· ${REPEAT[ev.repeat]}</span>`:''}</div></div>
    ${ev.ext?'':`<div class="bell" title="Erinnerungen">🔔 ${ev.rems.length}</div>`}</button>`;
 }
 
