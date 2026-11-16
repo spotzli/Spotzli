@@ -27,5 +27,5 @@ export function lumoSvg(mood){
    <path d="M60 27c0-7 1-12 4-16" stroke="${L}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
    <path d="M64 12c4-8 14-9 18-6-3 7-11 10-18 6z" fill="var(--m-leaf)" stroke="${L}" stroke-width="2"/>
    <ellipse cx="40" cy="72" rx="5" ry="3.2" fill="var(--m-cheek)" opacity=".8"/><ellipse cx="80" cy="72" rx="5" ry="3.2" fill="var(--m-cheek)" opacity=".8"/>`;
-  return `<svg viewBox="0 0 120 120" role="img" aria-label="Spozli">${extra}${body}${arms}${face}</svg>`;
+  return `<svg viewBox="0 0 120 120" role="img" aria-label="Spotzi">${extra}${body}${arms}${face}</svg>`;
 }

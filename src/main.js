@@ -49,7 +49,7 @@ const errText = (e) => {
 // ---------- Anmelden ----------
 function showLogin(mode = 'login') {
   const signup = mode === 'signup';
-  screen(`<h1 class="authtitle">${signup ? 'Konto erstellen' : 'Willkommen bei Spozli'}</h1>
+  screen(`<h1 class="authtitle">${signup ? 'Konto erstellen' : 'Willkommen bei Spotzi'}</h1>
   <p class="authsub">${signup ? 'Mit E-Mail und Passwort. Du bleibst danach auf diesem Gerät angemeldet.' : 'Euer gemeinsamer Kalender, To-dos, Haushalt und Einkaufsliste.'}</p>
   <form id="authform" class="card authcard">
     <div class="field"><label for="email">E-Mail</label><input class="inp" id="email" type="email" autocomplete="email" required></div>
@@ -108,7 +108,7 @@ function showResend(email) {
 
 function showConfirmed() {
   screen(`<h1 class="authtitle">E-Mail bestätigt!</h1>
-  <p class="authsub">Dein Konto ist bereit. Öffne Spozli jetzt über das Icon auf deinem Home-Bildschirm und melde dich dort mit E-Mail und Passwort an.</p>
+  <p class="authsub">Dein Konto ist bereit. Öffne Spotzi jetzt über das Icon auf deinem Home-Bildschirm und melde dich dort mit E-Mail und Passwort an.</p>
   <p class="authsub">Noch nicht installiert? Tippe in Safari auf das Teilen-Symbol und dann auf „Zum Home-Bildschirm“.</p>
   <button class="authswitch" id="here">Lieber hier im Browser weitermachen</button>`);
   document.getElementById('here').onclick = () => boot();
@@ -131,7 +131,7 @@ function showNewPassword() {
 // ---------- Haushalt einrichten ----------
 function showSetup(user) {
   screen(`<h1 class="authtitle">Schön, dass du da bist!</h1>
-  <p class="authsub">Wie heißt du? So sieht dich deine Partnerin oder dein Partner in Spozli.</p>
+  <p class="authsub">Wie heißt du? So sieht dich deine Partnerin oder dein Partner in Spotzi.</p>
   <div class="card authcard">
     <div class="field"><label for="name">Dein Name</label><input class="inp" id="name" autocomplete="given-name" placeholder="z. B. Sevi"></div>
     <div class="seg vseg" role="group" aria-label="Haushalt"><button type="button" data-mode="create" aria-pressed="true">Neu erstellen</button><button type="button" data-mode="join" aria-pressed="false">Einladungscode</button></div>

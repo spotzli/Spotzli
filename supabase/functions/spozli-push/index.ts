@@ -1,4 +1,4 @@
-// Spozli Push-Funktion (Supabase Edge Function "spozli-push")
+// Spotzi Push-Funktion (Supabase Edge Function "spozli-push")
 // - action "tick": jede Minute per Cron; verschickt fällige Erinnerungen, Morgen-Übersicht, Habits, Wasser
 // - action "item": neuer gemeinsamer Termin, Push an die andere Person (per Datenbank-Trigger)
 // - action "vapid": öffentlicher Schlüssel für die App
@@ -169,7 +169,7 @@ async function saying(today: string) {
     return sayings![(doy - 1) % sayings!.length]?.[0] || '';
   } catch (e) { return ''; }
 }
-const WATER_MSG = ['Zeit für ein Glas Wasser 💧', 'Spozli hat Durst. Du vielleicht auch? 💧', 'Ein Schluck Wasser, ein tiefer Atemzug. 💧', 'Kleine Trinkpause gefällig? 💧', 'Dein Körper sagt Danke für ein Glas Wasser 💧'];
+const WATER_MSG = ['Zeit für ein Glas Wasser 💧', 'Spotzi hat Durst. Du vielleicht auch? 💧', 'Ein Schluck Wasser, ein tiefer Atemzug. 💧', 'Kleine Trinkpause gefällig? 💧', 'Dein Körper sagt Danke für ein Glas Wasser 💧'];
 
 // ---------- Was ist jetzt fällig? ----------
 async function tick() {
@@ -238,7 +238,7 @@ async function tick() {
       if (t.done) continue;
       if (t.remindAt) {
         const [d, hm] = String(t.remindAt).split('T');
-        add(`td:${it.id}:${t.remindAt}`, quiet(zoned(d, hm, tz)), '✅ ' + t.title, t.due ? `Fällig ${dateLabel(t.due)}${t.time ? ', ' + t.time + ' Uhr' : ''}` : 'Spozli erinnert dich an dein To-do', `td-${it.id}`);
+        add(`td:${it.id}:${t.remindAt}`, quiet(zoned(d, hm, tz)), '✅ ' + t.title, t.due ? `Fällig ${dateLabel(t.due)}${t.time ? ', ' + t.time + ' Uhr' : ''}` : 'Spotzi erinnert dich an dein To-do', `td-${it.id}`);
       } else if (typeof t.remind === 'number' && t.due) {
         add(`td:${it.id}:${t.due}:${t.remind}`, quiet(zoned(t.due, t.time || '09:00', tz) - t.remind * 60000), '✅ ' + t.title, t.remind === 0 ? 'Jetzt fällig' : `Fällig ${dateLabel(t.due)}${t.time ? ', ' + t.time + ' Uhr' : ''}`, `td-${it.id}`);
       }
@@ -260,7 +260,7 @@ async function tick() {
       const h = it.data || {};
       if (!h.remind || !(h.rdays || [0, 1, 2, 3, 4, 5, 6]).includes(loc.wd)) continue;
       const log: string[] = h.log || [];
-      let body = 'Kleine Erinnerung von Spozli. Du schaffst das!';
+      let body = 'Kleine Erinnerung von Spotzi. Du schaffst das!';
       if (h.freq === 'weekly') {
         const ws = addDays(today, -((loc.wd + 6) % 7));
         const n = log.filter((d) => d >= ws && d <= addDays(ws, 6)).length;
@@ -289,7 +289,7 @@ async function tick() {
           for (const c of cds) { const n = dayNum(c.date) - dayNum(today); lines.push(n === 0 ? `${c.icon || '⏳'} Heute: ${c.title}!` : `${c.icon || '⏳'} Noch ${n} ${n === 1 ? 'Tag' : 'Tage'} bis ${c.title}`); }
         }
         if (P.mshop !== false && F.shop !== false) { const sh = hh.filter((it) => it.kind === 'shop'); if (sh.length) lines.push(`Einkauf: ${sh.length} Artikel`); }
-        if (P.mquote !== false && P.lumo !== false) { const q = await saying(today); if (q) lines.push('Spozli: ' + q); }
+        if (P.mquote !== false && P.lumo !== false) { const q = await saying(today); if (q) lines.push('Spotzi: ' + q); }
         cand.push({ key: `${m.user_id}:mo:${today}`, msg: { title: `Guten Morgen, ${m.name}! Das steht heute an`, body: lines.join('\n'), tag: 'morning', url: APP_URL } });
       }
     }
@@ -360,7 +360,7 @@ async function fetchIcs(raw: string) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), 15000);
   try {
-    const r = await fetch(url, { signal: ctl.signal, headers: { 'User-Agent': 'Spozli-Kalender/1.0', Accept: 'text/calendar, */*' } });
+    const r = await fetch(url, { signal: ctl.signal, headers: { 'User-Agent': 'Spotzi-Kalender/1.0', Accept: 'text/calendar, */*' } });
     if (!r.ok) throw new Error(`Kalender antwortet mit ${r.status}`);
     const text = await r.text();
     if (text.length > 5_000_000) throw new Error('Kalender ist zu groß');
@@ -369,7 +369,7 @@ async function fetchIcs(raw: string) {
   } finally { clearTimeout(t); }
 }
 
-// ---------- Spozli als Kalender-Abo (für Apple Kalender) ----------
+// ---------- Spotzi als Kalender-Abo (für Apple Kalender) ----------
 const icsEsc = (s: string) => String(s || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/([,;])/g, '\\$1');
 const icsDate = (d: string) => d.replace(/-/g, '');
 const icsDT = (d: string, hm: string) => icsDate(d) + 'T' + hm.replace(':', '') + '00';
@@ -388,8 +388,8 @@ async function feed(token: string) {
   const [m] = await sql`select name from public.members where user_id = ${pr.owner_id} and household_id = ${pr.household_id}`;
   const rows = await sql`select id, data, updated_at from public.items where household_id = ${pr.household_id} and kind = 'event' and not deleted and (visibility = 'shared' or owner_id = ${pr.owner_id})`;
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
-  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Spozli//DE', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
-    `X-WR-CALNAME:Spozli${m?.name ? ' (' + icsEsc(m.name) + ')' : ''}`, 'X-PUBLISHED-TTL:PT30M', 'REFRESH-INTERVAL;VALUE=DURATION:PT30M'];
+  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Spotzi//DE', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    `X-WR-CALNAME:Spotzi${m?.name ? ' (' + icsEsc(m.name) + ')' : ''}`, 'X-PUBLISHED-TTL:PT30M', 'REFRESH-INTERVAL;VALUE=DURATION:PT30M'];
   for (const r of rows as any[]) {
     const ev = r.data || {};
     if (!ev.date) continue;
@@ -436,7 +436,7 @@ Deno.serve(async (req) => {
     if (action === 'test') {
       const [s] = await sql`select endpoint, p256dh, auth, user_id from public.push_subs where endpoint = ${String(body.endpoint || '')}`;
       if (!s) return json({ ok: false, error: 'unknown' }, 404);
-      const st = await sendPush(s as any, { title: 'Spozli sagt Hallo 👋', body: 'So kommen ab jetzt deine Erinnerungen an. Alles klappt!', tag: 'test', url: APP_URL }, 600);
+      const st = await sendPush(s as any, { title: 'Spotzi sagt Hallo 👋', body: 'So kommen ab jetzt deine Erinnerungen an. Alles klappt!', tag: 'test', url: APP_URL }, 600);
       return json({ ok: st < 300, status: st });
     }
     const c = await config();

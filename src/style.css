@@ -177,7 +177,7 @@ details.cat[open] summary::after{content:"–"}
 .tpls{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none}
 .tpls button{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:500}
 
-/* Spozli */
+/* Spotzi */
 .lumo{display:grid;grid-template-columns:96px 1fr;gap:12px;align-items:center}
 .lumo svg{width:96px;height:96px;display:block}
 .bubble{background:var(--bubble);border-radius:18px 18px 18px 4px;padding:12px 14px;font-size:15px;line-height:1.4;font-weight:500;position:relative}
@@ -385,7 +385,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-conten
 /* ---------- Laptop / Desktop (nur breite Bildschirme, Handy unverändert) ---------- */
 @media (min-width:1000px){
   nav.tabs{top:0;right:auto;bottom:0;width:224px;border-top:0;border-right:1px solid var(--line);padding:28px 14px 20px}
-  nav.tabs::before{content:"Spozli";display:block;font-family:var(--f-display);font-weight:800;font-size:24px;letter-spacing:-.02em;color:var(--accent);padding:0 12px 22px}
+  nav.tabs::before{content:"Spotzi";display:block;font-family:var(--f-display);font-weight:800;font-size:24px;letter-spacing:-.02em;color:var(--accent);padding:0 12px 22px}
   nav.tabs .in{max-width:none;display:flex;flex-direction:column;gap:4px}
   nav.tabs button{flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 12px;font-size:15px;border-radius:12px;text-align:left}
   nav.tabs button[hidden]{display:none}

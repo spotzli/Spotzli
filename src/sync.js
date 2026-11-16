@@ -1,4 +1,4 @@
-// Spozli: lokaler Speicher + Abgleich mit Supabase (offline-fähig)
+// Spotzi: lokaler Speicher + Abgleich mit Supabase (offline-fähig)
 // Alle Inhalte liegen als Zeilen in der Tabelle "items". Lokal wird eine Kopie
 // gehalten; Änderungen kommen in eine Warteschlange (outbox) und werden
 // übertragen, sobald eine Verbindung besteht.

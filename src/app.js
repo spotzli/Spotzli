@@ -2,7 +2,7 @@ import { lumoSvg } from './figure.js';
 import { SAYINGS } from './sayings.js';
 import { getMedia, setMedia, resizeImage } from './media.js';
 import { pushState, enablePush, disablePush, testPush, ensureRegistered, isIOS, FN_URL } from './push.js';
-import { parseICS, expandICS, toSpozliEvents } from './ics.js';
+import { parseICS, expandICS, toSpotziEvents } from './ics.js';
 import { SUPABASE_KEY } from './config.js';
 
 export function startApp(ctx){
@@ -47,17 +47,17 @@ const LUMO=SAYINGS;
 const dayOfYear=()=>{const n=new Date();return Math.floor((n-new Date(n.getFullYear(),0,0))/864e5)};
 let lumoIdx=null;
 function lumoToday(){return lumoIdx===null?(dayOfYear()-1)%LUMO.length:lumoIdx}
-function renderSpozli(){
+function renderSpotzi(){
   const [txt,mood,topic,q]=LUMO[lumoToday()];
   const note=(S.notes||{})[TODAY];
-  return `<div class="section-title">Spozli sagt<span>${topic}</span></div><div class="card">
+  return `<div class="section-title">Spotzi sagt<span>${topic}</span></div><div class="card">
    <div class="lumo"><div id="lumo-fig">${lumoSvg(mood)}</div><div class="bubble">${esc(txt)}</div></div>
    <p class="lumo-q"><b>Zum Nachdenken:</b> ${esc(q)}</p>
    ${note?`<div class="lumo-note">${esc(note)}</div>`:''}
    <div class="lumo-btns"><button data-lumo="breathe">Durchatmen</button><button data-lumo="note">${note?'Notiz ändern':'Gedanken notieren'}</button><button data-lumo="next">Noch ein Gedanke</button></div></div>`;
 }
 function openBreathe(){
-  openSheet(`<div class="breathe-wrap breathing">${lumoSvg('calm')}<div class="breathe-txt" id="btxt">Einatmen …</div><div class="hint" id="bcount">Atme mit Spozli: 4 Sekunden ein, 4 Sekunden aus.</div></div>
+  openSheet(`<div class="breathe-wrap breathing">${lumoSvg('calm')}<div class="breathe-txt" id="btxt">Einatmen …</div><div class="hint" id="bcount">Atme mit Spotzi: 4 Sekunden ein, 4 Sekunden aus.</div></div>
   <p class="hint" style="text-align:center">Wenn Angst oder Stress dich länger stark belasten, sprich mit jemandem, dem du vertraust, oder hol dir professionelle Unterstützung.</p>
   <div class="btns"><button class="btn primary" id="bdone">Fertig</button></div>`,sh=>{
     let n=0;const t=setInterval(()=>{const el=document.getElementById('btxt');if(!el){clearInterval(t);return}n++;el.textContent=n%2?'Ausatmen …':'Einatmen …';if(n>=12){clearInterval(t);el.textContent='Gut gemacht.'}},4000);
@@ -95,7 +95,7 @@ function renderHouse(){
   <div class="todos">${list.map(choreRow).join('')||'<div class="empty">Noch keine Haushaltsaufgaben. Wähle unten eine Vorlage oder tippe auf +.</div>'}</div>
   <div class="section-title">Vorlagen<span>antippen zum Hinzufügen</span></div>
   <div class="tpls">${CHORE_TPL.map(([n,i,e,u],k)=>`<button data-tpl="${k}">${i} ${n}</button>`).join('')}</div>
-  <p class="hint">Haushaltsaufgaben sind getrennt von To-dos und sehen beide. Bei „Abwechselnd“ wechselt Spozli nach jedem Erledigen automatisch, wer dran ist.</p>`;
+  <p class="hint">Haushaltsaufgaben sind getrennt von To-dos und sehen beide. Bei „Abwechselnd“ wechselt Spotzi nach jedem Erledigen automatisch, wer dran ist.</p>`;
 }
 function doneChore(id){
   const c=S.chores.find(x=>x.id===id);if(!c)return;const prev={last:c.last,due:c.due,next:c.next,lastBy:c.lastBy};
@@ -174,12 +174,12 @@ function hStreak(h){
   let n=0,d=hDoneOn(h,TODAY)?TODAY:addDays(TODAY,-1);while(hDoneOn(h,d)){n++;d=addDays(d,-1)}return n}
 function habitPct(){const l=S.habits||[];if(!l.length)return null;return Math.round(l.reduce((a,h)=>a+hProgress(h),0)/l.length*100)}
 function habitMood(p){const h=new Date().getHours();
-  if(p>=100)return ['party','Alles geschafft! Spozli tanzt vor Freude. Du bist großartig!'];
-  if(p>=75)return ['cheer','Fast geschafft. Spozli ist mächtig stolz auf dich!'];
+  if(p>=100)return ['party','Alles geschafft! Spotzi tanzt vor Freude. Du bist großartig!'];
+  if(p>=75)return ['cheer','Fast geschafft. Spotzi ist mächtig stolz auf dich!'];
   if(p>=50)return ['happy','Schon mehr als die Hälfte. Weiter so, Schritt für Schritt.'];
   if(p>=25)return ['calm','Ein guter Anfang. Jeder kleine Schritt zählt.'];
   if(p===0&&h<12)return ['sleepy','Der Tag hat gerade erst begonnen. Ganz in Ruhe.'];
-  return ['sad','Spozli ist ein bisschen traurig, glaubt aber fest an dich. Ein kleiner Schritt reicht schon.']}
+  return ['sad','Spotzi ist ein bisschen traurig, glaubt aber fest an dich. Ein kleiner Schritt reicht schon.']}
 function habitHero(compact){const p=habitPct();if(p===null)return '';const [mood,msg]=habitMood(p);
   const tag=compact?'button':'div';
   return `<${tag} class="hhero${compact?' compact':''}"${compact?' data-go="habits"':''}><span class="hfig">${lumoSvg(mood)}</span><span class="hinfo"><span class="hpct"><b>${p}&nbsp;%</b><span>Habits ${compact?'heute ':''}erledigt</span></span><span class="hbar"><i style="width:${p}%"></i></span><span class="hmsg">${msg}</span></span></${tag}>`}
@@ -204,7 +204,7 @@ function renderHabits(){
   <p class="hint">Tippe auf das Symbol, um einen Habit für heute abzuhaken. Deine Habits sieht nur du.</p>`}
 function toggleHabit(id){const h=S.habits.find(x=>x.id===id);if(!h)return;h.log=h.log||[];const before=habitPct();
   if(h.log.includes(TODAY))h.log=h.log.filter(d=>d!==TODAY);else{h.log.push(TODAY);h.log=h.log.filter(d=>dayNum(TODAY)-dayNum(d)<200)}
-  save();render();const p=habitPct();if(p===100&&before!==100)toast('100 %! Spozli feiert mit dir 🎉');
+  save();render();const p=habitPct();if(p===100&&before!==100)toast('100 %! Spotzi feiert mit dir 🎉');
   const f=document.querySelector('.hfig');if(f)f.classList.add('wiggle')}
 function openHabit(h,tpl){
   const isNew=!h;const f=h?JSON.parse(JSON.stringify(h)):{id:uid(),title:tpl?tpl[0]:'',icon:tpl?tpl[1]:'⭐',freq:'daily',target:3,remind:false,rtime:'19:00',rdays:[0,1,2,3,4,5,6],log:[]};
@@ -215,7 +215,7 @@ function openHabit(h,tpl){
    <div class="row" id="h-tw" style="margin-top:8px;align-items:center"><input type="number" min="1" max="7" class="inp" id="h-target" value="${f.target||3}" style="max-width:90px" aria-label="Wie oft pro Woche"><span>mal pro Woche</span></div></div>
   <div class="setting"><span>Erinnerung</span><button type="button" class="switch" role="switch" id="h-rem" aria-checked="${f.remind}" aria-label="Erinnerung"></button></div>
   <div id="h-rw"><div class="field"><label for="h-rtime">um</label><input type="time" class="inp" id="h-rtime" value="${f.rtime}"></div>
-   <div class="field"><span class="lbl">an diesen Tagen</span><div class="wdpick" id="h-days">${[1,2,3,4,5,6,0].map(d=>`<button type="button" data-hday="${d}" aria-pressed="${f.rdays.includes(d)}">${WD[d]}</button>`).join('')}</div><p class="hint" style="margin:6px 0 0">Spozli erinnert nur, wenn du den Habit an dem Tag noch nicht abgehakt hast.</p></div></div>
+   <div class="field"><span class="lbl">an diesen Tagen</span><div class="wdpick" id="h-days">${[1,2,3,4,5,6,0].map(d=>`<button type="button" data-hday="${d}" aria-pressed="${f.rdays.includes(d)}">${WD[d]}</button>`).join('')}</div><p class="hint" style="margin:6px 0 0">Spotzi erinnert nur, wenn du den Habit an dem Tag noch nicht abgehakt hast.</p></div></div>
   <div class="btns">${isNew?'':'<button class="btn danger" id="h-del">Löschen</button>'}<button class="btn primary" id="h-save">Speichern</button></div>`,sh=>{
     const $=q=>sh.querySelector(q);
     const draw=()=>{$('#h-tw').hidden=f.freq!=='weekly';$('#h-rem').setAttribute('aria-checked',f.remind);$('#h-rw').hidden=!f.remind;
@@ -243,7 +243,7 @@ function renderTodoList(){
   const done=list.filter(t=>t.done);
   const f=[['alle','Alle'],['mir','Für mich'],['gemeinsam','Gemeinsam']];
   return `<form class="qadd" id="tadd"><input id="tq" placeholder="Neues To-do, z. B. Müll raus" autocomplete="off" aria-label="Neues To-do"><button type="submit">Hinzufügen</button></form>
-  ${open.length?groups.filter(g=>g[1].length).map(([n,l])=>`<div class="section-title">${n}<span>${l.length}</span></div><div class="todos">${l.map(todoRow).join('')}</div>`).join(''):'<div class="empty" style="margin-top:12px">Alles erledigt. Spozli ist stolz auf euch.</div>'}
+  ${open.length?groups.filter(g=>g[1].length).map(([n,l])=>`<div class="section-title">${n}<span>${l.length}</span></div><div class="todos">${l.map(todoRow).join('')}</div>`).join(''):'<div class="empty" style="margin-top:12px">Alles erledigt. Spotzi ist stolz auf euch.</div>'}
   ${done.length?`<details class="cat" style="margin-top:16px"><summary>Erledigt (${done.length})</summary><div class="todos">${done.map(todoRow).join('')}</div></details>`:''}
   <p class="hint">Antippen öffnet Details wie Fälligkeit, Erinnerung und Wiederholung. Deine To-dos sieht nur du. Gemeinsame Aufgaben gehören in den Haushalt.</p>`;
 }
@@ -396,7 +396,7 @@ function renderHome(){
    ${stats.length?`<div class="stats">${stats.join('')}</div>`:''}</section>
   ${quick.length?`<div class="quick">${quick.join('')}</div>`:''}
   ${F.countdown?renderCountdowns():''}
-  ${S.prefs.lumo!==false?renderSpozli():''}
+  ${S.prefs.lumo!==false?renderSpotzi():''}
   ${F.habits&&habitPct()!==null?`<div class="section-title">Habits heute<button class="more" data-go="habits">Alle anzeigen</button></div>${habitHero(true)}`:''}
   ${S.prefs.water&&S.prefs.water.on?waterCard():''}
   ${F.cal?`<div class="section-title">Kalender<button class="more" data-go="cal">Alle anzeigen</button></div>
@@ -418,7 +418,7 @@ const WIDE=matchMedia('(min-width: 1000px)');
 const DASH_TILES={
   today:{t:'Heute',i:'☀️',on:()=>true,w:1,h:2,html:()=>dashToday()},
   cal:{t:'Kalender',i:'📅',go:'cal',on:F=>F.cal,w:2,h:5,html:()=>renderCal()},
-  spozli:{t:'Spozli',i:'💛',on:()=>S.prefs.lumo!==false,w:1,h:3,html:()=>renderSpozli().replace(/^<div class="section-title">[\s\S]*?<\/div>/,'')},
+  spozli:{t:'Spotzi',i:'💛',on:()=>S.prefs.lumo!==false,w:1,h:3,html:()=>renderSpotzi().replace(/^<div class="section-title">[\s\S]*?<\/div>/,'')},
   todo:{t:'To-dos',i:'✅',go:'todo',on:F=>F.todo,w:1,h:3,html:()=>renderTodoList()},
   shop:{t:'Einkauf',i:'🛒',go:'shop',on:F=>F.shop,w:1,h:4,html:()=>renderShop()},
   house:{t:'Haushalt',i:'🧹',go:'house',on:F=>F.house,w:1,h:3,html:()=>renderHouse()},
@@ -495,7 +495,7 @@ function openCountdown(c,preset){
       if(b.dataset.cdi){f.icon=b.dataset.cdi;sh.querySelectorAll('[data-cdi]').forEach(x=>x.setAttribute('aria-pressed',x===b))}
       if(b.dataset.cdv){f.vis=b.dataset.cdv;sh.querySelectorAll('[data-cdv]').forEach(x=>x.setAttribute('aria-pressed',x===b))}});
     $('#cd-save').onclick=()=>{f.title=$('#cd-title').value.trim()||'Etwas Schönes';f.date=$('#cd-date').value||TODAY;
-      S.countdowns=S.countdowns||[];const i=S.countdowns.findIndex(x=>x.id===f.id);if(i>=0)S.countdowns[i]=f;else S.countdowns.push(f);save();closeSheet();render();const n=dayNum(f.date)-dayNum(TODAY);toast(n>0?`Noch ${n} ${n===1?'Tag':'Tage'}. Spozli freut sich mit!`:'Gespeichert')};
+      S.countdowns=S.countdowns||[];const i=S.countdowns.findIndex(x=>x.id===f.id);if(i>=0)S.countdowns[i]=f;else S.countdowns.push(f);save();closeSheet();render();const n=dayNum(f.date)-dayNum(TODAY);toast(n>0?`Noch ${n} ${n===1?'Tag':'Tage'}. Spotzi freut sich mit!`:'Gespeichert')};
     const d=$('#cd-del');if(d)d.onclick=()=>{if(d.dataset.sure){S.countdowns=S.countdowns.filter(x=>x.id!==f.id);save();closeSheet();render();toast('Gelöscht')}else{d.dataset.sure='1';d.textContent='Wirklich löschen?'}};
     if(isNew&&!f.title)setTimeout(()=>$('#cd-title').focus(),50);
   });
@@ -538,7 +538,7 @@ function openSub(sub){
   <div class="field"><span class="lbl">Farbe</span><div class="swatches" style="justify-content:flex-start">${SUBCOLORS.map(col=>`<button type="button" class="sw" style="background:${col}" data-sbc="${col}" aria-pressed="${f.color===col}" aria-label="Farbe"></button>`).join('')}</div></div>
   <div class="field"><span class="lbl">Wer sieht die Termine?</span><div class="seg vseg"><button type="button" data-sbv="private" aria-pressed="${f.vis!=='shared'}">Nur ich</button><button type="button" data-sbv="shared" aria-pressed="${f.vis==='shared'}">Beide</button></div></div>
   ${c?`<p class="hint">${c.err?'⚠️ '+esc(c.err):c.at?'Zuletzt aktualisiert: '+new Date(c.at).toLocaleString('de-DE',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})+' · '+(c.vevents||[]).length+' Einträge':'Noch nicht geladen'}</p>`:''}
-  <p class="hint">Abonnierte Termine aktualisieren sich automatisch und sind in Spozli nur zum Ansehen. Ändern kannst du sie im ursprünglichen Kalender.</p>
+  <p class="hint">Abonnierte Termine aktualisieren sich automatisch und sind in Spotzi nur zum Ansehen. Ändern kannst du sie im ursprünglichen Kalender.</p>
   <div class="btns">${isNew?'':'<button class="btn danger" id="sb-del">Entfernen</button>'}<button class="btn primary" id="sb-save">${isNew?'Abonnieren':'Speichern & aktualisieren'}</button></div>`,sh=>{
     const $=q=>sh.querySelector(q);
     sh.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
@@ -555,11 +555,11 @@ function openSub(sub){
 }
 function openImport(){
   let found=[];let cat=PICK[S.user][0][0];
-  openSheet(`<h3>Kalender-Datei importieren</h3><p class="hint" style="margin-top:-6px">Wähle eine .ics-Datei (z. B. aus Google, Outlook oder Apple exportiert). Die Termine werden einmalig in Spozli übernommen und sind danach normale Spozli-Termine.</p>
+  openSheet(`<h3>Kalender-Datei importieren</h3><p class="hint" style="margin-top:-6px">Wähle eine .ics-Datei (z. B. aus Google, Outlook oder Apple exportiert). Die Termine werden einmalig in Spotzi übernommen und sind danach normale Spotzi-Termine.</p>
   <div class="btns"><button class="btn" id="im-pick">Datei wählen</button></div><input type="file" id="im-file" accept=".ics,text/calendar" hidden>
   <div id="im-res"></div>`,sh=>{
     const $=q=>sh.querySelector(q);$('#im-pick').onclick=()=>$('#im-file').click();
-    $('#im-file').onchange=async()=>{const fl=$('#im-file').files[0];if(!fl)return;try{found=toSpozliEvents(parseICS(await fl.text()),addDays(TODAY,-1))}catch(e){found=[]}
+    $('#im-file').onchange=async()=>{const fl=$('#im-file').files[0];if(!fl)return;try{found=toSpotziEvents(parseICS(await fl.text()),addDays(TODAY,-1))}catch(e){found=[]}
       $('#im-res').innerHTML=found.length?`<p><b>${found.length} Termine gefunden</b> (ab heute, Wiederholungen bleiben erhalten).</p>
        <div class="field"><span class="lbl">Für wen</span><div class="catpick">${PICK[S.user].map(([k,l])=>`<button type="button" data-imc="${k}" style="--cat:var(${CATS[k].v})" aria-pressed="${k===cat}">${l}</button>`).join('')}</div></div>
        <div class="btns"><button class="btn primary" id="im-go">Importieren</button></div>`:'<p class="hint">Keine kommenden Termine in dieser Datei gefunden.</p>'};
@@ -568,7 +568,7 @@ function openImport(){
       if(b.id==='im-go'){for(const ev of found)S.events.push({id:uid(),kind:'event',cat,nag:0,by:S.user,rems:ev.allday?[]:[S.defRem],...ev});save();closeSheet();render();toast(found.length+' Termine importiert')}});
   });
 }
-/* ---------- Spozli im Apple Kalender (Abo-Link) ---------- */
+/* ---------- Spotzi im Apple Kalender (Abo-Link) ---------- */
 const feedUrl=()=>S.prefs.feedToken?FN_URL.replace(/^https:/,'webcal:')+'?action=feed&t='+S.prefs.feedToken:null;
 const newToken=()=>[...crypto.getRandomValues(new Uint8Array(18))].map(b=>b.toString(16).padStart(2,'0')).join('');
 function remRow(r){
@@ -582,8 +582,8 @@ function pushCardHtml(){const st=pushInfo.state;
   const head=`<div class="setting"><div><b>Push auf diesem Gerät</b><div class="hint" style="margin:0">${
     st==='on'?'Aktiv. Erinnerungen, Morgen-Übersicht und Wasser kommen als Mitteilung.':
     st==='off'?'Noch nicht aktiviert.':
-    st==='denied'?(isIOS()?'Mitteilungen sind blockiert. iPhone-Einstellungen → Mitteilungen → Spozli → Mitteilungen erlauben.':'Mitteilungen sind im Browser blockiert.'):
-    st==='install'?'Auf dem iPhone gehen Push-Nachrichten nur in der installierten App: In Safari Teilen → „Zum Home-Bildschirm“, dann Spozli vom Home-Bildschirm öffnen.':
+    st==='denied'?(isIOS()?'Mitteilungen sind blockiert. iPhone-Einstellungen → Mitteilungen → Spotzi → Mitteilungen erlauben.':'Mitteilungen sind im Browser blockiert.'):
+    st==='install'?'Auf dem iPhone gehen Push-Nachrichten nur in der installierten App: In Safari Teilen → „Zum Home-Bildschirm“, dann Spotzi vom Home-Bildschirm öffnen.':
     st==='unsupported'?'Dieser Browser unterstützt keine Push-Nachrichten.':'Wird geprüft …'}</div></div>${st==='on'?'<span class="okbadge">✓</span>':''}</div>`;
   const btns=st==='off'?`<button class="btn primary" id="push-on"${pushInfo.busy?' disabled':''}>${pushInfo.busy?'Wird aktiviert …':'Push aktivieren'}</button>`:
     st==='on'?`<button class="btn" id="push-test"${pushInfo.busy?' disabled':''}>Test senden</button><button class="btn" id="push-off">Hier ausschalten</button>`:'';
@@ -593,7 +593,7 @@ async function refreshPush(){try{pushInfo.state=await pushState()}catch(e){pushI
 async function pushAction(id){
   if(id==='push-on'){pushInfo.busy=true;drawPushCard();try{await enablePush(ctx.supabase);if(!S.pushOn){S.pushOn=true;save()}toast('Push ist aktiv');}catch(e){toast(e.message==='denied'?'Mitteilungen wurden abgelehnt':e.message==='dismissed'?'Nicht aktiviert':'Aktivieren fehlgeschlagen ('+e.message+')')}pushInfo.busy=false;await refreshPush();render()}
   if(id==='push-off'){try{await disablePush(ctx.supabase)}catch(e){}await refreshPush();toast('Push auf diesem Gerät aus')}
-  if(id==='push-test'){pushInfo.busy=true;drawPushCard();try{await testPush(ctx.supabase);toast('Test gesendet. Kommt nichts an, prüfe den Fokus-Modus und Einstellungen › Mitteilungen › Spozli.')}catch(e){toast('Test fehlgeschlagen ('+e.message+')')}pushInfo.busy=false;drawPushCard()}
+  if(id==='push-test'){pushInfo.busy=true;drawPushCard();try{await testPush(ctx.supabase);toast('Test gesendet. Kommt nichts an, prüfe den Fokus-Modus und Einstellungen › Mitteilungen › Spotzi.')}catch(e){toast('Test fehlgeschlagen ('+e.message+')')}pushInfo.busy=false;drawPushCard()}
 }
 function renderRem(){setTimeout(refreshPush,0);
   const rems=upcomingReminders(14);
@@ -607,16 +607,16 @@ function renderRem(){setTimeout(refreshPush,0);
    <div class="card" style="margin-top:10px"><div class="setting"><div><b>Erinnerungen senden</b><div class="hint" style="margin:0">Hauptschalter für alle Push-Nachrichten an ${esc(USERS[S.user].name)}</div></div><button class="switch" role="switch" id="pushsw" aria-checked="${S.pushOn}" aria-label="Erinnerungen senden"></button></div>
    <div class="setting"><label for="defrem"><b>Standard für neue Termine</b></label><select class="inp" id="defrem">${remOpts}</select></div></div>
    <div class="section-title">Wasser trinken</div>
-   <div class="card"><div class="setting"><div><b>Spozli erinnert ans Trinken</b><div class="hint" style="margin:0">Mit Gläser-Zähler auf der Startseite</div></div><button class="switch" role="switch" data-wpref="on" aria-checked="${!!W.on}" aria-label="Wasser-Erinnerung"></button></div>
+   <div class="card"><div class="setting"><div><b>Spotzi erinnert ans Trinken</b><div class="hint" style="margin:0">Mit Gläser-Zähler auf der Startseite</div></div><button class="switch" role="switch" data-wpref="on" aria-checked="${!!W.on}" aria-label="Wasser-Erinnerung"></button></div>
     <div ${W.on?'':'hidden'}><div class="setting"><label for="w-every">Wie oft</label><select class="inp" id="w-every" style="max-width:55%">${[[30,'Alle 30 Min'],[60,'Jede Stunde'],[90,'Alle 1,5 Std'],[120,'Alle 2 Std'],[180,'Alle 3 Std']].map(([v,l])=>`<option value="${v}"${W.every===v?' selected':''}>${l}</option>`).join('')}</select></div>
     <div class="setting"><span>Zeitfenster</span><span class="row" style="max-width:60%"><input type="time" class="inp" id="w-from" value="${W.from}" aria-label="Von"><input type="time" class="inp" id="w-to" value="${W.to}" aria-label="Bis"></span></div>
     <div class="setting"><label for="w-goal">Tagesziel</label><select class="inp" id="w-goal" style="max-width:55%">${[4,5,6,7,8,9,10,12].map(v=>`<option value="${v}"${W.goal===v?' selected':''}>${v} Gläser</option>`).join('')}</select></div>
-    <p class="hint" style="margin:6px 2px 2px">Hast du dein Tagesziel erreicht, ist Spozli für heute still.</p></div></div>
+    <p class="hint" style="margin:6px 2px 2px">Hast du dein Tagesziel erreicht, ist Spotzi für heute still.</p></div></div>
    <div class="section-title">Morgen-Übersicht</div>
    <div class="card"><div class="setting"><div><b>„Was steht heute an?“</b><div class="hint" style="margin:0">Jeden Morgen eine Push mit allen Terminen des Tages</div></div>${sw('morning',P.morning,'Morgen-Übersicht')}</div>
     <div class="setting"><label for="mtime"><b>Uhrzeit</b></label><input type="time" class="inp" id="mtime" value="${P.mtime}" style="max-width:130px"></div>
     <div class="setting"><span>Einkaufsliste mit anzeigen</span>${sw('mshop',P.mshop,'Einkaufsliste mit anzeigen')}</div>
-    <div class="setting"><span>Spruch von Spozli mitsenden</span>${sw('mquote',P.mquote,'Spruch von Spozli')}</div>
+    <div class="setting"><span>Spruch von Spotzi mitsenden</span>${sw('mquote',P.mquote,'Spruch von Spotzi')}</div>
     <div class="setting"><span>Auch am Wochenende</span>${sw('mweekend',P.mweekend,'Auch am Wochenende')}</div>
     <div class="setting"><span class="hint" style="margin:0">So sieht die Nachricht heute aus</span><button class="today-btn" id="mtest">Vorschau</button></div></div>
    <div class="section-title">Benachrichtigen bei</div>
@@ -860,23 +860,23 @@ function openSettings(){
     ${D.bg==='color'?`<label class="row" style="align-items:center;margin-top:8px"><span>Farbe wählen</span><input type="color" id="d-bgc" value="${D.bgColor}" style="width:60px;height:36px;border:0;background:none"></label>`:''}
     ${D.bg==='grad'?`<div class="swatches" style="justify-content:flex-start;margin-top:8px">${Object.entries(GRADS).map(([k,[n,g]])=>`<button class="sw" style="background:${g}" data-dgrad="${k}" aria-label="${n}" title="${n}" aria-pressed="${D.grad===k}"></button>`).join('')}</div>`:''}
     ${D.bg==='photo'?`<div class="btns" style="margin-top:8px"><button class="btn" id="d-photo">${media.photo?'Anderes Foto':'Foto wählen'}</button></div>`:''}
-    ${D.bg==='mood'?`<div class="moodedit">${media.mood.map((u,i)=>`<div class="mthumb"><img src="${u}" alt=""><button type="button" data-mdel="${i}" aria-label="Bild entfernen">✕</button></div>`).join('')}${media.mood.length<6?'<button type="button" class="madd" id="d-madd">+ Fotos</button>':''}</div><p class="hint" style="margin:6px 0 0">Bis zu 6 Fotos, Spozli legt sie als Collage an.</p>`:''}
+    ${D.bg==='mood'?`<div class="moodedit">${media.mood.map((u,i)=>`<div class="mthumb"><img src="${u}" alt=""><button type="button" data-mdel="${i}" aria-label="Bild entfernen">✕</button></div>`).join('')}${media.mood.length<6?'<button type="button" class="madd" id="d-madd">+ Fotos</button>':''}</div><p class="hint" style="margin:6px 0 0">Bis zu 6 Fotos, Spotzi legt sie als Collage an.</p>`:''}
     ${D.bg!=='none'?`<label class="setting" style="padding-inline:0"><span>Schleier über dem Hintergrund</span><input type="range" min="0" max="80" step="5" id="d-veil" value="${D.veil}" style="max-width:45%"></label>`:''}
     ${D.bg==='photo'||D.bg==='mood'?'<p class="hint" style="margin:2px 0 0">Fotos bleiben nur auf diesem Gerät gespeichert.</p>':''}
     <input type="file" accept="image/*" id="d-file" hidden><input type="file" accept="image/*" id="d-mfile" multiple hidden></div></div>
   <div class="sgroup">Funktionen für ${esc(USERS[S.user].name)}</div><div class="card">
    ${[['cal','Kalender','📅'],['todo','To-dos','✅'],['habits','Habits','🔥'],['house','Haushalt','🧹'],['shop','Einkaufsliste','🛒'],['countdown','Countdowns','⏳']].map(([k,l,i])=>`<div class="setting"><span>${i} ${l}</span><button class="switch" role="switch" data-feat="${k}" aria-checked="${FEAT()[k]}" aria-label="${l}"></button></div>`).join('')}
-   <div class="setting"><span>🌱 Spozli-Sprüche</span><button class="switch" role="switch" data-sp="lumo" aria-checked="${P.lumo!==false}" aria-label="Spozli-Sprüche"></button></div>
+   <div class="setting"><span>🌱 Spotzi-Sprüche</span><button class="switch" role="switch" data-sp="lumo" aria-checked="${P.lumo!==false}" aria-label="Spotzi-Sprüche"></button></div>
    <div class="setting"><span>💧 Wasser trinken</span><button class="switch" role="switch" data-featw="1" aria-checked="${!!(P.water&&P.water.on)}" aria-label="Wasser trinken"></button></div>
    <p class="hint" style="margin:6px 2px 2px">Ausgeschaltetes verschwindet aus der Leiste und von der Startseite. Deine Daten bleiben erhalten.</p></div>
   ${FEAT().cal?`<div class="sgroup">Andere Kalender</div><div class="card">
    ${(S.calsubs||[]).map(c=>{const x=loadExt(c.id);return `<div class="setting"><span class="tag" style="--cat:${c.color};font-size:14px;color:var(--ink)">${esc(c.name)}${c.vis==='shared'?' · Beide':''}${x.err?' ⚠️':''}</span><button class="today-btn" data-sub="${c.id}">Bearbeiten</button></div>`}).join('')}
    <div class="setting"><div><span>Kalender abonnieren</span><div class="hint" style="margin:0">Google, iCloud, Outlook … per Link, aktualisiert sich automatisch</div></div><button class="today-btn" id="sub-new">+ Abo</button></div>
    <div class="setting"><div><span>Datei importieren</span><div class="hint" style="margin:0">Einmalig aus einer .ics-Datei übernehmen</div></div><button class="today-btn" id="imp">Import</button></div></div>
-  <div class="sgroup">Spozli im iPhone-Kalender</div><div class="card">
-   ${feedUrl()?`<div class="setting col"><span>Deine Spozli-Termine als Kalender-Abo</span><div class="feedurl">${esc(feedUrl())}</div>
+  <div class="sgroup">Spotzi im iPhone-Kalender</div><div class="card">
+   ${feedUrl()?`<div class="setting col"><span>Deine Spotzi-Termine als Kalender-Abo</span><div class="feedurl">${esc(feedUrl())}</div>
     <div class="btns" style="margin-top:6px"><a class="btn primary" href="${esc(feedUrl())}">Im Kalender abonnieren</a><button class="btn" id="feed-copy">Link kopieren</button></div>
-    <button class="more" id="feed-new" style="margin-top:6px">Neuen Link erzeugen (alter wird ungültig)</button></div>`:`<div class="setting"><div><span>Spozli-Termine im Apple Kalender</span><div class="hint" style="margin:0">Deine Termine erscheinen als Abo im iPhone-Kalender (nur lesen)</div></div><button class="today-btn" id="feed-new">Link erstellen</button></div>`}
+    <button class="more" id="feed-new" style="margin-top:6px">Neuen Link erzeugen (alter wird ungültig)</button></div>`:`<div class="setting"><div><span>Spotzi-Termine im Apple Kalender</span><div class="hint" style="margin:0">Deine Termine erscheinen als Abo im iPhone-Kalender (nur lesen)</div></div><button class="today-btn" id="feed-new">Link erstellen</button></div>`}
    <p class="hint" style="margin:6px 2px 2px">Enthält deine privaten und die gemeinsamen Termine. Teile den Link mit niemandem. Der iPhone-Kalender aktualisiert das Abo selbst (Einstellungen → Kalender → Accounts → Abrufen).</p></div>`:''}
   <div class="sgroup">Kalender</div><div class="card">
    <div class="setting"><label for="s-ws">Erster Wochentag</label>${sel('s-ws',[[1,'Montag'],[0,'Sonntag']],P.weekStart)}</div>
@@ -889,7 +889,7 @@ function openSettings(){
    <div class="setting"><span>Zeitzone</span><span class="hint" style="margin:0">${esc(Intl.DateTimeFormat().resolvedOptions().timeZone||'Automatisch')} (automatisch)</span></div></div>
   <div class="sgroup">Kategorien &amp; Farben</div><div class="card">
    ${Object.entries(CATS).filter(([,c])=>!c.ext&&(c.owner===S.user||c.owner==='both')).map(([k,c])=>{const cur=P.colors[k]||'';return `<div class="setting col"><div class="head"><span class="tag" style="--cat:var(${c.v});font-size:14px">${c.label}</span>${cur?`<button class="more" data-reset="${k}">Standard</button>`:''}</div><div class="swatches" style="justify-content:flex-start">${COLORS.map(col=>`<button class="sw" style="background:${col}" data-col="${k}|${col}" aria-label="Farbe ${col}" aria-pressed="${cur===col}"></button>`).join('')}</div></div>`}).join('')}</div>
-  <div class="sgroup">Spozli</div><div class="card"><div class="setting"><div><span>Spozli auf der Startseite</span><div class="hint" style="margin:0">Täglicher Gedanke, Atemübung, Notizen</div></div>${sw('lumo',P.lumo!==false,'Spozli anzeigen')}</div></div>
+  <div class="sgroup">Spotzi</div><div class="card"><div class="setting"><div><span>Spotzi auf der Startseite</span><div class="hint" style="margin:0">Täglicher Gedanke, Atemübung, Notizen</div></div>${sw('lumo',P.lumo!==false,'Spotzi anzeigen')}</div></div>
   <div class="sgroup">Benachrichtigungen</div><div class="card"><div class="setting"><span>Push, Morgen-Übersicht, Nachtruhe, alle Erinnerungen</span><button class="today-btn" id="s-go-rem">Öffnen</button></div></div>
   <div class="btns" style="margin-top:18px"><button class="btn primary" id="s-done">Fertig</button></div>`,sh=>{
     const upd=()=>{save();render();const y=sh.scrollTop;openSettings();layer.querySelector('.sheet').scrollTop=y};
@@ -931,7 +931,7 @@ function openAccount(){
   const other=S.user==='sevi'?'sie':'sevi';
   openSheet(`<div class="profhead">${avatarHtml(S.user,'bigav','id="av-pick" aria-label="Profilbild ändern"')}<div><h3 style="margin:0">${esc(me)}</h3><p class="hint" style="margin:2px 0 0">Angemeldet als ${esc(ctx.email||'')}</p></div></div>
   <div class="btns" style="margin-top:10px"><button class="btn" id="av-btn">${(S.avatars||{})[S.user]?'Profilbild ändern':'Profilbild wählen'}</button>${(S.avatars||{})[S.user]?'<button class="btn" id="av-del">Entfernen</button>':''}</div><input type="file" accept="image/*" id="av-file" hidden>
-  <div class="card" style="margin-top:10px">${partner?`<div class="setting"><span>Verbunden mit</span><span style="display:flex;align-items:center;gap:8px">${avatarHtml(other,'avatar sm','tabindex="-1"')}<b>${esc(USERS[other].name)}</b></span></div>`:`<div class="setting col"><b>Partner einladen</b><span class="hint" style="margin:0">Schick diesen Code an die zweite Person. Sie erstellt in Spozli ein Konto und wählt „Ich habe einen Einladungscode“.</span><div class="invite" id="invite">${esc(ctx.inviteCode||'')}</div><button class="btn" id="copy-code">Code kopieren</button></div>`}
+  <div class="card" style="margin-top:10px">${partner?`<div class="setting"><span>Verbunden mit</span><span style="display:flex;align-items:center;gap:8px">${avatarHtml(other,'avatar sm','tabindex="-1"')}<b>${esc(USERS[other].name)}</b></span></div>`:`<div class="setting col"><b>Partner einladen</b><span class="hint" style="margin:0">Schick diesen Code an die zweite Person. Sie erstellt in Spotzi ein Konto und wählt „Ich habe einen Einladungscode“.</span><div class="invite" id="invite">${esc(ctx.inviteCode||'')}</div><button class="btn" id="copy-code">Code kopieren</button></div>`}
    <div class="setting"><span>Synchronisierung</span><span class="hint" style="margin:0">${syncText()}</span></div></div>
   <div class="btns" style="margin-top:16px"><button class="btn danger" id="logout">Abmelden</button><button class="btn primary" id="acc-ok">Fertig</button></div>`,sh=>{
     sh.querySelector('#acc-ok').onclick=closeSheet;
@@ -964,7 +964,7 @@ function morningPush(){
   if(S.prefs.mshop&&S.list.length)body+='\nEinkauf: '+S.list.length+' Artikel ('+S.list.slice(0,3).map(i=>i.name).join(', ')+(S.list.length>3?' …':'')+')';
   {const td=(S.todos||[]).filter(t=>todoVisible(t)&&mine(t)&&!t.done&&t.due&&t.due<=TODAY);if(td.length)body+='\nTo-dos: '+td.map(t=>t.title).slice(0,3).join(', ')+(td.length>3?' …':'');}
   {const hc=(S.chores||[]).filter(c=>choreMine(c)&&c.due<=TODAY);if(hc.length)body+='\nHaushalt: '+hc.map(c=>c.title).join(', ');}
-  if(S.prefs.mquote&&S.prefs.lumo!==false)body+='\nSpozli: '+LUMO[(dayOfYear()-1)%LUMO.length][0];
+  if(S.prefs.mquote&&S.prefs.lumo!==false)body+='\nSpotzi: '+LUMO[(dayOfYear()-1)%LUMO.length][0];
   pushRaw('Guten Morgen, '+USERS[S.user].name+'! Das steht heute an',body);
 }
 function push(ev,m){
@@ -1012,7 +1012,7 @@ app.addEventListener('click',e=>{
   if(t.dataset.habit){openHabit(S.habits.find(x=>x.id===t.dataset.habit));return}
   if(t.dataset.htpl){openHabit(null,HABIT_TPL[+t.dataset.htpl]);return}
   if(t.dataset.tmode){S.todoMode=t.dataset.tmode;save();render();return}
-  if(t.dataset.water){const w=glassesToday()+ +t.dataset.water;S.prefs.glasses={d:TODAY,n:Math.max(0,w)};save();render();if(+t.dataset.water>0&&w===(S.prefs.water||{}).goal)toast('Tagesziel erreicht! Spozli ist stolz 💧');return}
+  if(t.dataset.water){const w=glassesToday()+ +t.dataset.water;S.prefs.glasses={d:TODAY,n:Math.max(0,w)};save();render();if(+t.dataset.water>0&&w===(S.prefs.water||{}).goal)toast('Tagesziel erreicht! Spotzi ist stolz 💧');return}
   if(t.dataset.todo){openTodo(S.todos.find(x=>x.id===t.dataset.todo));return}
   if(t.dataset.tfilter){todoFilter=t.dataset.tfilter;render();return}
   if(t.dataset.lumo){const a=t.dataset.lumo;if(a==='breathe')openBreathe();else if(a==='note')openNote();else{let i;do{i=Math.floor(Math.random()*LUMO.length)}while(i===lumoToday());lumoIdx=i;render();const f=document.getElementById('lumo-fig');if(f)f.classList.add('wiggle')}return}
@@ -1029,7 +1029,7 @@ app.addEventListener('click',e=>{
   if(t.dataset.pref){const k=t.dataset.pref;if(k.startsWith('cat:'))S.prefs.cats[k.slice(4)]=!S.prefs.cats[k.slice(4)];else S.prefs[k]=!S.prefs[k];save();render();return}
   if(t.id==='mtest'){morningPush();return}
   if(t.id==='push-on'||t.id==='push-off'||t.id==='push-test'){pushAction(t.id);return}
-  if(t.dataset.wpref){S.prefs.water={...WATER_DEF,...S.prefs.water,on:!(S.prefs.water||{}).on};save();render();if(S.prefs.water.on&&pushInfo.state!=='on')toast('Tipp: Aktiviere oben Push, damit Spozli dich erinnern kann');return}
+  if(t.dataset.wpref){S.prefs.water={...WATER_DEF,...S.prefs.water,on:!(S.prefs.water||{}).on};save();render();if(S.prefs.water.on&&pushInfo.state!=='on')toast('Tipp: Aktiviere oben Push, damit Spotzi dich erinnern kann');return}
   if(t.id==='pushsw'){S.pushOn=!S.pushOn;save();render();toast(S.pushOn?'Push-Nachrichten an':'Push-Nachrichten aus');return}
   if(t.dataset.user){S.user=t.dataset.user;save();render();return}
   if(t.dataset.day){S.sel=t.dataset.day;if(t.dataset.day.slice(0,7)!==S.month)S.month=t.dataset.day.slice(0,7);save();render();return}

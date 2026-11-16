@@ -1,4 +1,4 @@
-// 365 Gedanken von Spozli: [Spruch, Pose, Thema, Frage zum Nachdenken]
+// 365 Gedanken von Spotzi: [Spruch, Pose, Thema, Frage zum Nachdenken]
 export const SAYINGS = [
 [
 "Du musst heute nicht alles schaffen. Ein Schritt nach dem anderen reicht völlig.",
@@ -2179,7 +2179,7 @@ export const SAYINGS = [
 "Was macht dir heute Leichtigkeit?"
 ],
 [
-"Du bist nicht allein auf deinem Weg. Spozli läuft mit.",
+"Du bist nicht allein auf deinem Weg. Spotzi läuft mit.",
 "hug",
 "Selbstvertrauen",
 "Wer begleitet dich noch?"

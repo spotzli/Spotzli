@@ -1,4 +1,4 @@
-# Spozli
+# Spotzi
 
 Gemeinsamer Kalender, To-dos, Haushalt und Einkaufsliste für zwei Personen, als installierbare Web-App (PWA) fürs iPhone.
 
@@ -34,7 +34,7 @@ BASE_PATH=/ npm run dev
 
 ## Aufbau
 
-- `src/app.js`: Oberfläche (Kalender, To-dos, Haushalt, Einkauf, Spozli)
+- `src/app.js`: Oberfläche (Kalender, To-dos, Haushalt, Einkauf, Spotzi)
 - `src/sync.js`: lokale Kopie, Warteschlange für Offline-Änderungen, Abgleich mit Supabase
 - `src/main.js`: Anmelden, Haushalt erstellen oder beitreten, Start
 - `supabase/schema.sql`: Tabellen und Zugriffsregeln. Private Einträge sieht nur, wer sie angelegt hat; das prüft die Datenbank selbst.

@@ -14,8 +14,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Spozli',
-        short_name: 'Spozli',
+        name: 'Spotzi',
+        short_name: 'Spotzi',
         description: 'Gemeinsamer Kalender, To-dos, Haushalt und Einkaufsliste',
         lang: 'de',
         start_url: base,

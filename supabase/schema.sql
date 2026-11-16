@@ -1,4 +1,4 @@
--- Spozli: Datenbank-Schema für Supabase
+-- Spotzi: Datenbank-Schema für Supabase
 -- Einmal komplett im Supabase SQL Editor ausführen (Run).
 
 -- Haushalte -------------------------------------------------------------

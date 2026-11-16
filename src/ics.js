@@ -153,8 +153,8 @@ export function expandICS(vevents, from, to, prefix) {
   return res;
 }
 
-// Für den einmaligen Import: Termine in Spozli-Termine umwandeln (einfache Wiederholungen bleiben erhalten)
-export function toSpozliEvents(vevents, fromDate) {
+// Für den einmaligen Import: Termine in Spotzi-Termine umwandeln (einfache Wiederholungen bleiben erhalten)
+export function toSpotziEvents(vevents, fromDate) {
   const out = [];
   for (const e of vevents) {
     if (e.recid) continue;

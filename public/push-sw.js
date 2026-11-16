@@ -1,8 +1,8 @@
-// Spozli: Push-Nachrichten im Service Worker anzeigen
+// Spotzi: Push-Nachrichten im Service Worker anzeigen
 self.addEventListener('push', (event) => {
   let d = {};
   try { d = event.data ? event.data.json() : {}; } catch (e) { d = { body: event.data && event.data.text() }; }
-  const title = d.title || 'Spozli';
+  const title = d.title || 'Spotzi';
   event.waitUntil(self.registration.showNotification(title, {
     body: d.body || '',
     icon: 'icon-192.png',
