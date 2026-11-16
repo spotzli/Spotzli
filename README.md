@@ -9,7 +9,7 @@ Gemeinsamer Kalender, To-dos, Haushalt und Einkaufsliste für zwei Personen, als
 ## Einrichtung (einmalig)
 
 1. **Datenbank:** Inhalt von `supabase/schema.sql` im Supabase Dashboard unter *SQL Editor* einfügen und ausführen.
-2. **Login-Links:** Supabase → *Authentication* → *URL Configuration*: Site URL `https://spotzli.github.io/Spotzli/` und dieselbe Adresse unter *Redirect URLs* eintragen.
+2. **Anmeldung:** Supabase → *Authentication* → *Sign In / Providers* → *Email*: „Confirm email“ ausschalten (sonst funktioniert die Bestätigungs-Mail im iPhone-Web-App-Modus nicht zuverlässig). Optional unter *URL Configuration* die Site URL `https://spotzli.github.io/Spotzli/` setzen (für „Passwort vergessen“).
 3. **GitHub Pages:** Repo → *Settings* → *Pages* → Source: *GitHub Actions*.
 
 ## Auf dem iPhone installieren
