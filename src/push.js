@@ -1,0 +1,64 @@
+// Echte Push-Nachrichten (Web Push). Auf dem iPhone nur in der installierten App (Home-Bildschirm).
+import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
+
+export const FN_URL = `${SUPABASE_URL}/functions/v1/spozli-push`;
+const HEADERS = { 'Content-Type': 'application/json', apikey: SUPABASE_KEY };
+
+export const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+export const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+export const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+
+function b64u(s) {
+  const p = '='.repeat((4 - (s.length % 4)) % 4);
+  const raw = atob((s + p).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
+const same = (a, b) => a && b && a.byteLength === b.byteLength && new Uint8Array(a).every((v, i) => v === b[i]);
+
+export async function currentSub() {
+  if (!pushSupported()) return null;
+  const reg = await navigator.serviceWorker.getRegistration();
+  return reg ? reg.pushManager.getSubscription() : null;
+}
+
+// Zustand für die Anzeige: unsupported | install | denied | off | on
+export async function pushState() {
+  if (!pushSupported()) return isIOS() && !isStandalone() ? 'install' : 'unsupported';
+  if (Notification.permission === 'denied') return 'denied';
+  const sub = await currentSub();
+  return sub && Notification.permission === 'granted' ? 'on' : 'off';
+}
+
+export async function enablePush(supabase) {
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') throw new Error(perm === 'denied' ? 'denied' : 'dismissed');
+  const reg = await navigator.serviceWorker.ready;
+  const r = await fetch(`${FN_URL}?action=vapid`, { headers: { apikey: SUPABASE_KEY } });
+  if (!r.ok) throw new Error('server');
+  const { key } = await r.json();
+  if (!key) throw new Error('server');
+  const appKey = b64u(key);
+  let sub = await reg.pushManager.getSubscription();
+  if (sub && !same(sub.options?.applicationServerKey, appKey)) { await sub.unsubscribe(); sub = null; }
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: appKey });
+  const j = sub.toJSON();
+  const { error } = await supabase.rpc('register_push', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent.slice(0, 200) });
+  if (error) throw error;
+  return sub;
+}
+
+export async function disablePush(supabase) {
+  const sub = await currentSub();
+  if (!sub) return;
+  await supabase.rpc('unregister_push', { p_endpoint: sub.endpoint });
+  await sub.unsubscribe();
+}
+
+export async function testPush() {
+  const sub = await currentSub();
+  if (!sub) throw new Error('off');
+  const r = await fetch(FN_URL, { method: 'POST', headers: HEADERS, body: JSON.stringify({ action: 'test', endpoint: sub.endpoint }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.ok) throw new Error(j.error || 'server');
+  return j;
+}

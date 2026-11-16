@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { SAYINGS } from './src/sayings.js';
 
 // Hosting: GitHub Pages https://spotzli.github.io/Spotzli/
 const base = process.env.BASE_PATH || '/Spotzli/';
@@ -7,6 +8,8 @@ const base = process.env.BASE_PATH || '/Spotzli/';
 export default defineConfig({
   base,
   plugins: [
+    // Sprüche zusätzlich als JSON für die Push-Funktion auf dem Server
+    { name: 'sayings-json', generateBundle() { this.emitFile({ type: 'asset', fileName: 'sayings.json', source: JSON.stringify(SAYINGS) }); } },
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
@@ -29,6 +32,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
         navigateFallback: base + 'index.html',
+        importScripts: ['push-sw.js'],
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com',

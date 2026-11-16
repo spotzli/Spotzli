@@ -16,6 +16,9 @@ export function lumoSvg(mood){
     case 'think':arms=arm(24,82,20)+arm(80,76,-60);face=eyesOpen(1.5,-2)+oh;extra=`<text x="96" y="34" font-size="22" font-weight="800" fill="${L}" font-family="sans-serif">?</text>`;break;
     case 'cheer':arms=arm(20,46,-25)+arm(100,46,25);face=eyesHappy+big;extra=spark(14,24)+spark(106,22)+spark(96,8);break;
     case 'cozy':arms=arm(46,86,55)+arm(74,86,-55);face=eyesClosed+smile;extra=heart(53,82,1.2);break;
+    case 'sad':arms=arm(30,88,10)+arm(90,88,-10);face=`<path d="M40 55l9-4M80 55l-9-4" stroke="${L}" stroke-width="2.5" stroke-linecap="round"/>`+eyesOpen(0,1.5)+`<path d="M54 79q6-5 12 0" stroke="${L}" stroke-width="3" fill="none" stroke-linecap="round"/>`;extra=`<path d="M92 30a7 7 0 0 1 13-3 6 6 0 0 1 3 11H93a5 5 0 0 1-1-8z" fill="#C9D3EA"/>`+heart(10,40,.7);break;
+    case 'party':arms=arm(18,40,-30)+arm(102,40,30);face=eyesHappy+big;extra=spark(12,20)+spark(108,18)+spark(60,6)+`<rect x="28" y="12" width="5" height="9" rx="1.5" fill="#FF6F96" transform="rotate(-25 30 16)"/><rect x="88" y="6" width="5" height="9" rx="1.5" fill="#34C48A" transform="rotate(30 90 10)"/><rect x="100" y="40" width="5" height="9" rx="1.5" fill="#4C9BFF" transform="rotate(15 102 44)"/><rect x="8" y="46" width="5" height="9" rx="1.5" fill="#FFC542" transform="rotate(-10 10 50)"/>`;break;
+    case 'sleepy':arms=arm(36,86,25)+arm(84,86,-25);face=eyesClosed+`<ellipse cx="60" cy="76" rx="3" ry="2.5" fill="${L}"/>`;extra=`<text x="88" y="34" font-size="14" font-weight="800" fill="${L}" font-family="sans-serif">z</text><text x="98" y="22" font-size="19" font-weight="800" fill="${L}" font-family="sans-serif">Z</text>`;break;
     default:arms=arm(22,84,20)+arm(98,84,-20);face=eyesOpen()+smile;
   }
   const body=`<path d="M60 26c22 0 38 18 38 44 0 22-16 34-38 34S22 92 22 70c0-26 16-44 38-44z" fill="var(--m-body)" stroke="${L}" stroke-width="2.5"/>

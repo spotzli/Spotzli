@@ -9,6 +9,7 @@ const COLLECTIONS = {
   chores: { kind: 'chore', vis: () => 'shared' },
   choreLog: { kind: 'chorelog', vis: () => 'shared' },
   list: { kind: 'shop', vis: () => 'shared' },
+  habits: { kind: 'habit', vis: () => 'private' },
 };
 const stable = (v) => {
   if (Array.isArray(v)) return '[' + v.map(stable).join(',') + ']';
@@ -16,7 +17,7 @@ const stable = (v) => {
   return JSON.stringify(v ?? null);
 };
 const strip = (r) => { const d = JSON.parse(JSON.stringify(r)); delete d.id; return d; };
-const MANAGED = new Set(['event', 'todo', 'chore', 'chorelog', 'shop', 'recent', 'note', 'prefs']);
+const MANAGED = new Set(['event', 'todo', 'chore', 'chorelog', 'shop', 'habit', 'recent', 'note', 'prefs', 'avatar']);
 
 export function createStore({ supabase, householdId, userId, onRemoteChange, onStatus }) {
   const KEY = `spozli-cache-${householdId}-${userId}`;
@@ -43,6 +44,9 @@ export function createStore({ supabase, householdId, userId, onRemoteChange, onS
     }
     out[recentId] = { kind: 'recent', visibility: 'shared', data: { names: S.recent || [] } };
     out[prefsId] = { kind: 'prefs', visibility: 'private', data: { prefs: S.prefs, defRem: S.defRem, pushOn: S.pushOn } };
+    if (S.avatars && S.avatars[S.user] !== undefined) {
+      out[`${userId}:avatar`] = { kind: 'avatar', visibility: 'shared', data: { slot: S.user, img: S.avatars[S.user] || null } };
+    }
     for (const [d, text] of Object.entries(S.notes || {})) {
       out[noteId(d)] = { kind: 'note', visibility: 'private', data: { d, text } };
     }
@@ -51,21 +55,26 @@ export function createStore({ supabase, householdId, userId, onRemoteChange, onS
 
   // App-Zustand aus den Zeilen aufbauen (in-place, UI-Felder bleiben)
   function applyToState(S) {
-    const by = { event: [], todo: [], chore: [], chorelog: [], shop: [] };
+    const by = { event: [], todo: [], chore: [], chorelog: [], shop: [], habit: [] };
+    const avatars = {};
     let recent = null, prefs = null;
     const notes = {};
-    for (const [id, row] of Object.entries(cache.rows)) {
-      if (row.deleted) continue;
+    for (const [id, r0] of Object.entries(cache.rows)) {
+      if (r0.deleted) continue;
+      const row = { ...r0, data: JSON.parse(JSON.stringify(r0.data ?? {})) }; // Kopie für die App
       if (by[row.kind]) by[row.kind].push({ ...row.data, id });
       else if (row.kind === 'recent') recent = row.data.names || [];
       else if (row.kind === 'prefs' && id === prefsId) prefs = row.data;
       else if (row.kind === 'note' && row.data?.d) notes[row.data.d] = row.data.text;
+      else if (row.kind === 'avatar' && row.data?.slot) avatars[row.data.slot] = row.data.img || null;
     }
     S.events = by.event;
     S.todos = by.todo;
     S.chores = by.chore;
     S.choreLog = by.chorelog;
     S.list = by.shop.sort((a, b) => (a.addedAt || 0) - (b.addedAt || 0));
+    S.habits = by.habit;
+    S.avatars = avatars;
     S.recent = recent || [];
     S.notes = notes;
     if (prefs) {
@@ -86,14 +95,14 @@ export function createStore({ supabase, householdId, userId, onRemoteChange, onS
       if (same(cur, row)) continue;
       // Leere Einstellungen/Listen nicht anlegen, solange es sie noch nicht gibt
       if (!cur && row.kind === 'recent' && !row.data.names.length) continue;
-      const data = row.data;
+      const data = JSON.parse(JSON.stringify(row.data)); // Kopie, damit spätere Änderungen erkannt werden
       cache.rows[id] = { kind: row.kind, visibility: row.visibility, data, deleted: false };
       cache.outbox[id] = { id, kind: row.kind, visibility: row.visibility, data, deleted: false };
       changed = true;
     }
     for (const [id, cur] of Object.entries(cache.rows)) {
       if (cur.deleted || want[id] || !MANAGED.has(cur.kind)) continue;
-      if (cur.kind === 'prefs' || cur.kind === 'recent') continue;
+      if (cur.kind === 'prefs' || cur.kind === 'recent' || cur.kind === 'avatar') continue;
       cur.deleted = true;
       cache.outbox[id] = { id, kind: cur.kind, visibility: cur.visibility, data: cur.data, deleted: true };
       changed = true;

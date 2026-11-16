@@ -110,3 +110,83 @@ exception when duplicate_object then null; end $$;
 do $$ begin
   alter publication supabase_realtime add table public.members;
 exception when duplicate_object then null; end $$;
+
+-- =====================================================================
+-- Push-Nachrichten (ab Update 2)
+-- =====================================================================
+create extension if not exists pg_net with schema extensions;
+create extension if not exists pg_cron with schema pg_catalog;
+
+-- Geräte, die Push-Nachrichten empfangen
+create table if not exists public.push_subs (
+  endpoint text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  household_id uuid not null references public.households(id) on delete cascade,
+  p256dh text not null,
+  auth text not null,
+  ua text,
+  created_at timestamptz not null default now()
+);
+alter table public.push_subs enable row level security;
+drop policy if exists ps_select on public.push_subs;
+create policy ps_select on public.push_subs for select using (user_id = auth.uid());
+
+-- Interne Einstellungen (Schlüssel) und Versand-Protokoll: nur der Server liest das
+create table if not exists public.push_config (key text primary key, value text not null);
+alter table public.push_config enable row level security;
+revoke all on public.push_config from anon, authenticated;
+insert into public.push_config(key, value) values ('cron_secret', md5(random()::text || clock_timestamp()::text) || md5(random()::text)) on conflict (key) do nothing;
+insert into public.push_config(key, value) values ('function_url', 'https://rpmyvbxjicipfqipawkw.supabase.co/functions/v1/spozli-push') on conflict (key) do nothing;
+
+create table if not exists public.push_log (key text primary key, sent_at timestamptz not null default now());
+alter table public.push_log enable row level security;
+revoke all on public.push_log from anon, authenticated;
+
+-- Gerät an- und abmelden (aus der App)
+create or replace function public.register_push(p_endpoint text, p_p256dh text, p_auth text, p_ua text default null)
+returns void language plpgsql security definer set search_path = public as $$
+declare hh uuid;
+begin
+  if auth.uid() is null then raise exception 'Nicht angemeldet'; end if;
+  select household_id into hh from public.members where user_id = auth.uid() limit 1;
+  if hh is null then raise exception 'Kein Haushalt'; end if;
+  insert into public.push_subs(endpoint, user_id, household_id, p256dh, auth, ua)
+  values (p_endpoint, auth.uid(), hh, p_p256dh, p_auth, p_ua)
+  on conflict (endpoint) do update set user_id = excluded.user_id, household_id = excluded.household_id,
+    p256dh = excluded.p256dh, auth = excluded.auth, ua = excluded.ua, created_at = now();
+end $$;
+create or replace function public.unregister_push(p_endpoint text)
+returns void language sql security definer set search_path = public as $$
+  delete from public.push_subs where endpoint = p_endpoint and user_id = auth.uid();
+$$;
+grant execute on function public.register_push(text, text, text, text) to authenticated;
+grant execute on function public.unregister_push(text) to authenticated;
+
+-- Server-Funktion aufrufen (Fehler werden ignoriert, damit Speichern nie blockiert)
+create or replace function public.spozli_call_push(payload jsonb)
+returns void language plpgsql security definer set search_path = public as $$
+declare u text; k text;
+begin
+  select value into u from public.push_config where key = 'function_url';
+  select value into k from public.push_config where key = 'cron_secret';
+  perform net.http_post(url := u, body := payload,
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-spozli-key', k));
+exception when others then null;
+end $$;
+revoke execute on function public.spozli_call_push(jsonb) from public, anon, authenticated;
+
+-- Neuer gemeinsamer Termin: die andere Person bekommt sofort eine Push
+create or replace function public.items_notify() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.kind = 'event' and new.visibility = 'shared' and not new.deleted then
+    perform public.spozli_call_push(jsonb_build_object('action', 'item', 'id', new.id));
+  end if;
+  return null;
+end $$;
+drop trigger if exists items_notify on public.items;
+create trigger items_notify after insert on public.items for each row execute function public.items_notify();
+
+-- Jede Minute prüfen, was fällig ist
+do $$ begin perform cron.unschedule('spozli-push'); exception when others then null; end $$;
+select cron.schedule('spozli-push', '* * * * *', $cron$select public.spozli_call_push('{"action":"tick"}'::jsonb)$cron$);

@@ -3,7 +3,7 @@
 :root{
   --bg:#F3F5FA; --surface:#FFFFFF; --surface-2:#E9EDF6; --ink:#131A2E; --muted:#5B6584; --line:#DDE2EE;
   --accent:#4C5BD4; --accent-2:#2F7DEB; --accent-ink:#FFFFFF;
-  --c-film:#8A5CF0; --c-sevi:#2F7DEB; --c-both:#0E9F9B; --c-her:#DE4F8A;
+  --c-film:#E8820C; --c-sevi:#2F7DEB; --c-both:#16A36A; --c-her:#E0458B;
   --tile:#4C5BD4; --tile-ink:#FFFFFF; --tile-done:#DCE1EC; --tile-done-ink:#48516F;
   --m-body:#9FB6FF; --m-belly:#E3EAFF; --m-line:#1B2140; --m-cheek:#FF9EBB; --m-leaf:#34C48A; --bubble:#EEF1FF;
   --shadow:0 10px 30px rgba(20,28,60,.14); --shadow-s:0 1px 2px rgba(20,28,60,.06),0 2px 10px rgba(20,28,60,.05);
@@ -13,14 +13,14 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0B0F1E; --surface:#151A2D; --surface-2:#1E2540; --ink:#E8EBF7; --muted:#99A1C0; --line:#283052;
   --accent:#8F98FF; --accent-2:#5FA2FF; --accent-ink:#0B0F1E;
-  --c-film:#B38EFF; --c-sevi:#5FA2FF; --c-both:#2FD3C3; --c-her:#FF7BAF;
+  --c-film:#FFA94D; --c-sevi:#5FA2FF; --c-both:#3DD68C; --c-her:#FF7BAF;
   --tile:#4C5BD4; --tile-ink:#FFFFFF; --tile-done:#232A47; --tile-done-ink:#A6AECD;
   --m-body:#8EA6F5; --m-belly:#D5DEFF; --m-line:#151A30; --m-cheek:#FF8FB0; --m-leaf:#3DD598; --bubble:#232A4A;
   --shadow:0 10px 30px rgba(0,0,0,.5); --shadow-s:0 1px 2px rgba(0,0,0,.3); color-scheme:dark }}
 :root[data-theme="dark"]{
   --bg:#0B0F1E; --surface:#151A2D; --surface-2:#1E2540; --ink:#E8EBF7; --muted:#99A1C0; --line:#283052;
   --accent:#8F98FF; --accent-2:#5FA2FF; --accent-ink:#0B0F1E;
-  --c-film:#B38EFF; --c-sevi:#5FA2FF; --c-both:#2FD3C3; --c-her:#FF7BAF;
+  --c-film:#FFA94D; --c-sevi:#5FA2FF; --c-both:#3DD68C; --c-her:#FF7BAF;
   --tile:#4C5BD4; --tile-ink:#FFFFFF; --tile-done:#232A47; --tile-done-ink:#A6AECD;
   --m-body:#8EA6F5; --m-belly:#D5DEFF; --m-line:#151A30; --m-cheek:#FF8FB0; --m-leaf:#3DD598; --bubble:#232A4A;
   --shadow:0 10px 30px rgba(0,0,0,.5); --shadow-s:0 1px 2px rgba(0,0,0,.3); color-scheme:dark }
@@ -28,6 +28,8 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{margin:0}
+html{touch-action:manipulation;-webkit-text-size-adjust:100%}
+input,select,textarea{font-size:16px}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -302,3 +304,67 @@ body.auth nav.tabs, body.auth .fab, body.booting nav.tabs, body.booting .fab{dis
 .dotst.ok{background:var(--c-both)}.dotst.wait{background:var(--c-film)}.dotst.off{background:var(--muted)}
 .invite{font-family:var(--f-display);font-size:30px;font-weight:800;letter-spacing:.18em;text-align:center;padding:10px;background:var(--surface-2);border-radius:12px;margin:6px 0;user-select:all;-webkit-user-select:all}
 .setting.col .btn{flex:none}
+
+/* ---------- Update: Habits, Wasser, Design, Profilbild ---------- */
+.avatar.has-img,.bigav.has-img{background-size:cover;background-position:center;color:transparent}
+.avatar.sm{width:28px;height:28px;font-size:13px}
+.bigav{width:64px;height:64px;border-radius:50%;border:0;background:var(--av);color:#fff;font-family:var(--f-display);font-weight:800;font-size:26px;flex-shrink:0;box-shadow:var(--shadow-s)}
+.profhead{display:flex;align-items:center;gap:14px}
+.mch{cursor:pointer}
+.mch.cl{border-left:0;border-top-left-radius:0;border-bottom-left-radius:0;margin-left:-2px}
+.mch.cr{border-top-right-radius:0;border-bottom-right-radius:0;margin-right:-2px}
+.mch .mcont{font-style:normal;opacity:.55}
+.ask{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.ask svg{width:56px;height:56px;flex-shrink:0}
+.remask .chips{display:flex;flex-wrap:wrap;gap:8px}
+.remask .row{margin-top:8px}
+.okbadge{width:28px;height:28px;border-radius:50%;background:var(--c-both);color:#fff;display:grid;place-items:center;font-weight:800;flex-shrink:0}
+.hhero{display:grid;grid-template-columns:84px 1fr;gap:12px;align-items:center;background:var(--surface);border-radius:20px;padding:12px 14px;box-shadow:var(--shadow-s);width:100%;border:0;text-align:left}
+.hhero.compact{grid-template-columns:64px 1fr}
+.hfig svg{width:100%;height:auto;display:block}
+.hinfo{display:flex;flex-direction:column;gap:6px;min-width:0}
+.hpct{display:flex;align-items:baseline;gap:8px}
+.hpct b{font-family:var(--f-display);font-size:26px;font-weight:800;line-height:1}
+.hpct span{color:var(--muted);font-size:13px}
+.hbar{display:block;height:8px;border-radius:5px;background:var(--surface-2);overflow:hidden}
+.hbar i,.habit .bar i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--accent),var(--c-both));transition:width .4s}
+.hmsg{font-size:13px;color:var(--muted);line-height:1.35}
+.habit .hchk{font-size:17px;width:36px;height:36px;color:var(--ink);border-color:var(--line)}
+.habit .hchk.on{font-size:15px;color:#fff;border-color:var(--c-both)}
+.habit .bar{height:5px;border-radius:3px;background:var(--surface-2);margin-top:6px;overflow:hidden}
+.habit.hdone .t{color:var(--muted)}
+.wdpick{display:flex;gap:6px;flex-wrap:wrap}
+.wdpick button{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;width:42px;height:38px;font-weight:600;font-size:13px}
+.wdpick button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tpls [aria-pressed="true"]{border-color:var(--accent)!important;border-width:2px!important}
+.water .glasses{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-bottom:8px}
+.water .gl{font-size:22px;filter:grayscale(1);opacity:.3;transition:all .2s}
+.water .gl.on{filter:none;opacity:1}
+.water .wrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.water .iconbtn{width:40px;height:40px;font-size:22px}
+.water .iconbtn.plus{background:var(--accent);color:var(--accent-ink)}
+.swc{position:relative;overflow:hidden;display:inline-block;cursor:pointer}
+.swc input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.bgpick{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:8px}
+.bgpick button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--muted);padding:0}
+.bgpick i{display:grid;place-items:center;width:100%;aspect-ratio:3/4;border-radius:12px;border:2px solid var(--line);font-style:normal;font-size:20px;overflow:hidden}
+.bgpick [aria-pressed="true"] i{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent)}
+.bgpick [aria-pressed="true"]{color:var(--ink);font-weight:600}
+.mini-mood{display:grid!important;grid-template-columns:1fr 1fr;gap:1px}
+.mini-mood img{width:100%;height:100%;object-fit:cover}
+.moodedit{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.mthumb{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden}
+.mthumb img{width:100%;height:100%;object-fit:cover;display:block}
+.mthumb button{position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:12px}
+.madd{aspect-ratio:1;border-radius:12px;border:2px dashed var(--line);background:var(--surface);font-weight:600;color:var(--muted)}
+#bgl{position:fixed;inset:0;z-index:-1;pointer-events:none}
+#bgl::after{content:"";position:absolute;inset:0;background:var(--bg);opacity:var(--veil,.3)}
+.moodb{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:3px}
+.moodb img{width:100%;height:100%;object-fit:cover;display:block;min-height:0}
+.moodb.n1{grid-template-columns:1fr}
+.moodb.n3 img:first-child{grid-row:span 2}
+.moodb.n5 img:first-child{grid-row:span 2}
+body.has-bg{background:var(--bg)}
+body.has-bg header.top,body.has-bg::before{background:color-mix(in srgb,var(--bg) 72%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+body.has-bg header.top{margin-inline:-16px;padding-inline:16px}
+body.has-bg .section-title{text-shadow:0 1px 8px color-mix(in srgb,var(--bg) 80%,transparent)}

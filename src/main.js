@@ -2,6 +2,12 @@ import './style.css';
 import { createClient } from '@supabase/supabase-js';
 import { startApp } from './app.js';
 import { createStore } from './sync.js';
+import { disablePush } from './push.js';
+
+// Zoomen verhindern (Pinch und Doppeltipp), damit es sich wie eine App anfühlt
+['gesturestart', 'gesturechange', 'gestureend'].forEach((n) => document.addEventListener(n, (e) => e.preventDefault(), { passive: false }));
+document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+// Doppeltipp-Zoom ist per CSS (touch-action: manipulation) abgeschaltet
 import { lumoSvg } from './figure.js';
 import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
 
@@ -204,7 +210,7 @@ function launch(info) {
   });
   app = startApp({
     store, users, me: me.slot, filmen: !!by.sevi?.filmen, email: info.email,
-    inviteCode: info.inviteCode, partnerJoined: info.members.length > 1, onSignOut: signOut,
+    inviteCode: info.inviteCode, partnerJoined: info.members.length > 1, onSignOut: signOut, supabase,
   });
   store.start();
   running = { info };
@@ -213,6 +219,7 @@ function launch(info) {
 }
 
 async function signOut() {
+  try { await disablePush(supabase); } catch (e) { /* egal */ }
   try { await supabase.auth.signOut(); } catch (e) { /* offline */ }
   try {
     localStorage.removeItem(CTX_KEY);

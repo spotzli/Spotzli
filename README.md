@@ -12,6 +12,15 @@ Gemeinsamer Kalender, To-dos, Haushalt und Einkaufsliste für zwei Personen, als
 2. **Anmeldung:** Supabase → *Authentication* → *URL Configuration*: Site URL `https://spotzli.github.io/Spotzli/`, Redirect URL `https://spotzli.github.io/Spotzli/**`. E-Mail-Bestätigung bleibt eingeschaltet; der Link öffnet Safari, danach in der installierten App anmelden.
 3. **GitHub Pages:** Repo → *Settings* → *Pages* → Source: *GitHub Actions*.
 
+## Push-Nachrichten einrichten (einmalig)
+
+1. `supabase/schema.sql` im Supabase SQL Editor erneut komplett ausführen (legt Push-Tabellen, Trigger und den Minuten-Takt an).
+2. Supabase → Edge Functions → „Deploy a new function“ → „Via Editor“. Name: `spozli-push`. Inhalt von `supabase/functions/spozli-push/index.ts` einfügen, „Deploy“.
+3. In den Details der Funktion „Verify JWT“ (bzw. „Enforce JWT verification“) ausschalten und speichern. Die Funktion prüft selbst einen geheimen Schlüssel aus der Datenbank.
+4. In der installierten App: Zahnrad → Benachrichtigungen → „Push aktivieren“, dann „Test senden“.
+
+Die Schlüssel für Web Push erzeugt die Funktion beim ersten Aufruf selbst und speichert sie in `push_config` (für die App nicht lesbar).
+
 ## Auf dem iPhone installieren
 
 Die App-Adresse in **Safari** öffnen → Teilen-Symbol → **Zum Home-Bildschirm**.
