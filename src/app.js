@@ -364,9 +364,12 @@ function render(){
   const hr=new Date().getHours();const greet=hr<11?'Guten Morgen':hr<18?'Hallo':'Guten Abend';
   const titles={home:[fmtDay(TODAY),greet+', '+me],cal:['Unser Kalender','Kalender'],shop:['Unsere Liste','Einkauf'],todo:S.todoMode==='habits'?['Jeden Tag ein bisschen','Habits']:['Zu erledigen','To-dos'],house:['Wiederkehrend','Haushalt'],rem:['Für '+me,'Erinnerungen']};
   const [sm,big]=titles[S.tab];
+  const wide=WIDE.matches,dash=wide&&S.tab==='home';document.body.classList.toggle('wide',wide);document.body.classList.toggle('dash',dash);
+  {const hb=document.getElementById('tab-home');const lbl=wide?'Übersicht':'Start';if(hb.lastChild&&hb.lastChild.nodeType===3&&hb.lastChild.textContent!==lbl)hb.lastChild.textContent=lbl}
+  if(!dash)dashEdit=false;
   let h=`<header class="top"><div class="hello"><small>${esc(sm)}</small><h1>${esc(big)}</h1></div>
-  <div class="toprow">${avatarHtml(S.user,'avatar','id="who-btn" aria-label="Profil von '+esc(me)+'"')}<button class="gear" id="settings-btn" aria-label="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div></header>`;
-  h+={home:renderHome,cal:renderCal,todo:renderTodo,house:renderHouse,shop:renderShop,rem:renderRem}[S.tab]();
+  <div class="toprow">${dash?`<button class="btn dedit" id="dash-edit" aria-pressed="${dashEdit}">${dashEdit?'Fertig':'✎ Anpassen'}</button>`:''}${avatarHtml(S.user,'avatar','id="who-btn" aria-label="Profil von '+esc(me)+'"')}<button class="gear" id="settings-btn" aria-label="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div></header>`;
+  h+=dash?renderDash():{home:renderHome,cal:renderCal,todo:renderTodo,house:renderHouse,shop:renderShop,rem:renderRem}[S.tab]();
   h+=`<div class="syncline" id="syncline">${syncText()}</div>`;
   app.innerHTML=h;
 }
@@ -398,8 +401,7 @@ function renderHome(){
   ${S.prefs.water&&S.prefs.water.on?waterCard():''}
   ${F.cal?`<div class="section-title">Kalender<button class="more" data-go="cal">Alle anzeigen</button></div>
   <div class="card"><div class="agenda">${soon.length?soon.map(([ev,d])=>evRow(ev,d,true)).join(''):'<div class="empty">Die nächsten drei Tage sind frei.</div>'}</div></div>
-  ${(()=>{const out=[];for(let i=0;i<=90&&out.length<4;i++){const d=addDays(TODAY,i);eventsOn(d).filter(ev=>ev.kind&&ev.kind!=='event').forEach(ev=>{if(out.length<4)out.push([ev,d,i])})}
-    return out.length?`<div class="section-title">Geburtstage &amp; Jahrestage</div><div class="card"><div class="agenda">${out.map(([ev,d,i])=>`<button class="ev" style="--cat:var(${CATS[ev.cat].v})" data-ev="${ev.id}" data-d="${d}"><div class="time">${i===0?'Heute':i===1?'Morgen':'in '+i+' T.'}<small>${fromIso(d).toLocaleDateString('de-DE',{day:'numeric',month:'short'})}</small></div><div style="min-width:0"><div class="t">${esc(T(ev,d))}</div><div class="meta">${ev.note?esc(ev.note):''}</div></div><div class="bell">🔔 ${ev.rems.length}</div></button>`).join('')}</div></div>`:''})()}`:''}
+  ${datesHtml(4)}`:''}
   ${F.todo?(()=>{const l=(S.todos||[]).filter(t=>todoVisible(t)&&mine(t)&&!t.done&&t.due&&t.due<=TODAY);return `<div class="section-title">To-dos heute<button class="more" data-go="todo">Alle anzeigen</button></div><div class="card">${l.length?`<div class="todos">${l.slice(0,4).map(todoRow).join('')}</div>`:'<div class="empty" style="padding:8px">Heute nichts offen.</div>'}</div>`})():''}
   ${F.house?(()=>{const l=(S.chores||[]).filter(c=>choreMine(c)&&c.due<=TODAY);return l.length?`<div class="section-title">Haushalt heute<button class="more" data-go="house">Alle anzeigen</button></div><div class="todos">${l.slice(0,3).map(choreRow).join('')}</div>`:''})():''}
   ${F.shop?`<div class="section-title">Einkaufsliste<button class="more" data-go="shop">Liste öffnen</button></div>
@@ -407,12 +409,78 @@ function renderHome(){
   ${F.cal?`<div class="section-title">Nächste Erinnerungen<button class="more" data-go="rem">Alle</button></div>
   <div class="rlist">${rems.slice(0,3).map(remRow).join('')||'<div class="empty">Keine Erinnerungen in den nächsten zwei Wochen.</div>'}</div>`:''}`;
 }
+function datesHtml(max,bare){const out=[];for(let i=0;i<=90&&out.length<max;i++){const d=addDays(TODAY,i);eventsOn(d).filter(ev=>ev.kind&&ev.kind!=='event').forEach(ev=>{if(out.length<max)out.push([ev,d,i])})}
+  const list=`<div class="card"><div class="agenda">${out.map(([ev,d,i])=>`<button class="ev" style="--cat:var(${CATS[ev.cat].v})" data-ev="${ev.id}" data-d="${d}"><div class="time">${i===0?'Heute':i===1?'Morgen':'in '+i+' T.'}<small>${fromIso(d).toLocaleDateString('de-DE',{day:'numeric',month:'short'})}</small></div><div style="min-width:0"><div class="t">${esc(T(ev,d))}</div><div class="meta">${ev.note?esc(ev.note):''}</div></div><div class="bell">🔔 ${ev.rems.length}</div></button>`).join('')}</div></div>`;
+  if(bare)return out.length?list:'<div class="empty">In den nächsten 90 Tagen keine Geburtstage oder Jahrestage.</div>';
+  return out.length?`<div class="section-title">Geburtstage &amp; Jahrestage</div>${list}`:''}
+/* ---------- Laptop-Dashboard ---------- */
+const WIDE=matchMedia('(min-width: 1000px)');
+const DASH_TILES={
+  today:{t:'Heute',i:'☀️',on:()=>true,w:1,h:2,html:()=>dashToday()},
+  cal:{t:'Kalender',i:'📅',go:'cal',on:F=>F.cal,w:2,h:5,html:()=>renderCal()},
+  spozli:{t:'Spozli',i:'💛',on:()=>S.prefs.lumo!==false,w:1,h:3,html:()=>renderSpozli().replace(/^<div class="section-title">[\s\S]*?<\/div>/,'')},
+  todo:{t:'To-dos',i:'✅',go:'todo',on:F=>F.todo,w:1,h:3,html:()=>renderTodoList()},
+  shop:{t:'Einkauf',i:'🛒',go:'shop',on:F=>F.shop,w:1,h:4,html:()=>renderShop()},
+  house:{t:'Haushalt',i:'🧹',go:'house',on:F=>F.house,w:1,h:3,html:()=>renderHouse()},
+  habits:{t:'Habits',i:'🌱',go:'habits',on:F=>F.habits,w:1,h:3,html:()=>renderHabits()},
+  countdown:{t:'Countdowns',i:'⏳',on:F=>F.countdown,w:2,h:2,html:()=>renderCountdowns(true)},
+  rem:{t:'Nächste Erinnerungen',i:'🔔',go:'rem',on:F=>F.cal,w:1,h:3,html:()=>{const r=upcomingReminders(14);return `<div class="rlist">${r.slice(0,10).map(remRow).join('')||'<div class="empty">Keine Erinnerungen in den nächsten zwei Wochen.</div>'}</div>`}},
+  dates:{t:'Geburtstage & Jahrestage',i:'🎂',on:F=>F.cal,w:1,h:2,html:()=>datesHtml(8,true)},
+  water:{t:'Wasser',i:'💧',on:()=>!!(S.prefs.water&&S.prefs.water.on),w:1,h:2,html:()=>waterCard()},
+};
+const DASH_ORDER=['today','cal','spozli','todo','shop','house','habits','countdown','rem','dates','water'];
+let dashEdit=false;
+function dashCfg(){const d=S.prefs.dash||{};const order=(d.order||[]).filter(k=>DASH_TILES[k]);DASH_ORDER.forEach(k=>{if(!order.includes(k))order.push(k)});
+  return {order,hide:(d.hide||[]).filter(k=>DASH_TILES[k]),size:{...(d.size||{})}}}
+function dashSave(c){S.prefs.dash={order:c.order,hide:c.hide,size:c.size};save()}
+function dashToday(){const F=FEAT();
+  const todays=eventsOn(TODAY).filter(relevant);
+  const nowHM=pad(new Date().getHours())+':'+pad(new Date().getMinutes());
+  const next=todays.find(ev=>ev.allday||ev.time>=nowHM);
+  const big=!F.cal?'Schön, dass du da bist':next?`Als Nächstes: ${esc(next.title)}${next.allday?'':' um '+next.time}`:todays.length?'Für heute ist alles erledigt':'Heute steht nichts an';
+  const st=[F.cal&&['cal',todays.length,'Termine heute'],F.todo&&['todo',(S.todos||[]).filter(t=>todoVisible(t)&&mine(t)&&!t.done&&t.due&&t.due<=TODAY).length,'To-dos heute'],F.shop&&['shop',S.list.length,'Auf der Liste'],F.habits&&habitPct()!==null&&['habits',habitPct()+'%','Habits'],F.house&&['house',(S.chores||[]).filter(c=>choreMine(c)&&c.due<=TODAY).length,'Haushalt heute']].filter(Boolean);
+  return `<div class="dtoday"><div class="big">${big}</div><div class="dstats">${st.map(([g,n,l])=>`<button class="stat" data-go="${g}"><b>${n}</b><span>${l}</span></button>`).join('')}</div></div>`}
+function renderDash(){const F=FEAT();const c=dashCfg();
+  const avail=c.order.filter(k=>DASH_TILES[k].on(F));
+  const shown=avail.filter(k=>!c.hide.includes(k)),hidden=avail.filter(k=>c.hide.includes(k));
+  const tiles=shown.map(k=>{const d=DASH_TILES[k];const[w,h]=c.size[k]||[d.w,d.h];
+    return `<section class="dtile w${w}" style="grid-row:span ${h}" data-k="${k}" aria-label="${esc(d.t)}"><div class="dhead"><span class="dgrip" aria-hidden="true">${dashEdit?'⠿':d.i}</span><h2>${esc(d.t)}</h2>${dashEdit?`<button class="dbtn" data-dhide="${k}" title="Ausblenden" aria-label="${esc(d.t)} ausblenden">✕</button>`:d.go?`<button class="dbtn" data-go="${d.go}" title="Groß öffnen" aria-label="${esc(d.t)} groß öffnen">↗</button>`:''}</div>
+    <div class="dbody">${d.html()}</div>${dashEdit?'<div class="dshield"></div><div class="drz" title="Größe ändern" aria-hidden="true"></div>':''}</section>`}).join('');
+  const bar=dashEdit?`<div class="dbar"><b>Übersicht anpassen</b><span class="hint">Kacheln an der Kopfzeile ziehen zum Verschieben, an der Ecke unten rechts ziehen für die Größe.</span>
+    ${hidden.length?`<div class="dhidden">Ausgeblendet: ${hidden.map(k=>`<button class="chip" data-dshow="${k}">+ ${esc(DASH_TILES[k].t)}</button>`).join('')}</div>`:''}
+    <div class="dbar-btns"><button class="btn" id="dash-reset">Zurücksetzen</button></div></div>`:'';
+  return bar+`<div class="dgrid${dashEdit?' editing':''}" id="dgrid">${tiles||'<div class="empty">Alle Kacheln sind ausgeblendet. Tippe auf „Anpassen“.</div>'}</div>`}
+let ddrag=null;
+function dashDown(e){
+  if(!dashEdit||e.button>0)return;const tile=e.target.closest('.dtile');if(!tile||e.target.closest('button'))return;
+  const rz=!!e.target.closest('.drz');if(!rz&&!e.target.closest('.dhead,.dshield'))return;
+  e.preventDefault();const grid=tile.parentElement;const cs=getComputedStyle(grid);
+  const cols=cs.gridTemplateColumns.split(' ').filter(Boolean).length;const gap=parseFloat(cs.columnGap)||16;const rowH=parseFloat(cs.gridAutoRows)||130;
+  const r=tile.getBoundingClientRect();
+  ddrag={tile,rz,cols,gap,rowH,colW:(grid.clientWidth-gap*(cols-1))/cols,r,gx:e.clientX-r.left,gy:e.clientY-r.top,sx:e.clientX,sy:e.clientY,base:r,moved:false};
+  tile.classList.add(rz?'resizing':'dragging');try{tile.setPointerCapture(e.pointerId)}catch(_){}
+}
+function dashMove(e){const d=ddrag;if(!d)return;e.preventDefault();d.moved=true;
+  const edge=e.clientY<90?-24:e.clientY>innerHeight-70?24:0;if(edge){scrollBy(0,edge);if(!d.rz){d.tile.style.transform='';d.base=d.tile.getBoundingClientRect()}else{d.sy-=edge}}
+  if(d.rz){const w=Math.max(1,Math.min(d.cols,Math.round((d.r.width+e.clientX-d.sx+d.gap)/(d.colW+d.gap))));const h=Math.max(2,Math.min(8,Math.round((d.r.height+e.clientY-d.sy+d.gap)/(d.rowH+d.gap))));
+    if(w!==d.w||h!==d.h){d.w=w;d.h=h;d.tile.className=d.tile.className.replace(/\bw\d\b/,'w'+w);d.tile.style.gridRow='span '+h}return}
+  const over=document.elementsFromPoint(e.clientX,e.clientY).map(n=>n.closest&&n.closest('.dtile')).find(n=>n&&n!==d.tile);
+  if(over&&over!==d.last){d.last=over;const all=[...d.tile.parentElement.children];
+    if(all.indexOf(over)>all.indexOf(d.tile))over.after(d.tile);else over.before(d.tile);
+    d.tile.style.transform='';d.base=d.tile.getBoundingClientRect()}
+  else if(!over)d.last=null;
+  d.tile.style.transform=`translate(${e.clientX-d.gx-d.base.left}px,${e.clientY-d.gy-d.base.top}px)`}
+function dashUp(){const d=ddrag;if(!d)return;ddrag=null;d.tile.classList.remove('dragging','resizing');d.tile.style.transform='';
+  if(!d.moved)return;const c=dashCfg();
+  if(d.rz){if(d.w)c.size[d.tile.dataset.k]=[d.w,d.h]}
+  else{const vis=[...document.querySelectorAll('#dgrid .dtile')].map(t=>t.dataset.k);const rest=c.order.filter(k=>!vis.includes(k));c.order=vis.concat(rest)}
+  dashSave(c);render()}
 /* ---------- Countdowns ---------- */
 const CD_ICONS=['⏳','🏖️','✈️','🎂','💍','🎄','🎉','🏠','🎬','❤️','🎓','⚽','🎁','🐣','⛷️','🎵'];
 const cdVisible=()=>(S.countdowns||[]).filter(c=>c.date>=TODAY).sort((a,b)=>a.date<b.date?-1:1);
 function cdText(c){const n=dayNum(c.date)-dayNum(TODAY);return n===0?['Heute!','']:n===1?['1','Tag bis']:[String(n),'Tage bis']}
-function renderCountdowns(){const l=cdVisible();
-  return `<div class="section-title">Countdowns<button class="more" data-cd="new">+ Neu</button></div>
+function renderCountdowns(bare){const l=cdVisible();
+  return `${bare?'<div class="dtop"><button class="more" data-cd="new">+ Neuer Countdown</button></div>':'<div class="section-title">Countdowns<button class="more" data-cd="new">+ Neu</button></div>'}
   ${l.length?`<div class="cdrow">${l.map(c=>{const[n,t]=cdText(c);return `<button class="cd${n==='Heute!'?' today':''}" data-cd="${c.id}" style="--cat:var(${c.vis==='shared'?'--c-both':S.user==='sevi'?'--c-sevi':'--c-her'})"><span class="cdi">${esc(c.icon||'⏳')}</span><b>${n}</b><span class="cdl">${t}</span><span class="cdt">${esc(c.title)}</span></button>`}).join('')}</div>`:`<button class="card cdempty" data-cd="new">⏳ Worauf freust du dich? Lege einen Countdown an, z. B. bis zu den Ferien.</button>`}`}
 function openCountdown(c,preset){
   const isNew=!c;const f=c?JSON.parse(JSON.stringify(c)):{id:uid(),title:'',date:addDays(TODAY,14),icon:'⏳',vis:'shared',by:S.user,...(preset||{})};
@@ -930,6 +998,11 @@ app.addEventListener('contextmenu',e=>{const t=e.target.closest('[data-item]');i
 app.addEventListener('click',e=>{
   const mc=e.target.closest('.mch[data-ev]');if(mc){openDetail(mc.dataset.ev,mc.dataset.d);return}
   const t=e.target.closest('button');if(!t)return;
+  if(t.id==='dash-edit'||t.id==='dash-done'){dashEdit=!dashEdit&&t.id==='dash-edit';render();return}
+  if(t.id==='dash-reset'){delete S.prefs.dash;save();render();toast('Übersicht zurückgesetzt');return}
+  if(t.dataset.dhide){const c=dashCfg();c.hide.push(t.dataset.dhide);dashSave(c);render();return}
+  if(t.dataset.dshow){const c=dashCfg();c.hide=c.hide.filter(k=>k!==t.dataset.dshow);dashSave(c);render();return}
+  if(dashEdit&&t.closest('.dtile'))return;
   if(t.dataset.cdone){doneChore(t.dataset.cdone);return}
   if(t.dataset.chore){openChore(S.chores.find(x=>x.id===t.dataset.chore));return}
   if(t.dataset.tpl){openChore(null,CHORE_TPL[+t.dataset.tpl]);return}
@@ -977,7 +1050,9 @@ document.querySelectorAll('nav.tabs [data-tab]').forEach(b=>b.onclick=()=>{S.tab
 fab.onclick=()=>S.tab==='todo'?(S.todoMode==='habits'?openHabit(null):openTodo(null)):S.tab==='house'?openChore(null):openForm(null);
 function scrollGrid(){const g=document.getElementById('gbody');if(g)g.scrollTop=S.prefs.dayStart*48}
 document.querySelectorAll('nav.tabs [data-tab]').forEach(b=>b.addEventListener('click',scrollGrid));
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!layer.innerHTML&&dashEdit){dashEdit=false;render()}else closeSheet()}});
+app.addEventListener('pointerdown',dashDown);app.addEventListener('pointermove',dashMove);app.addEventListener('pointerup',dashUp);app.addEventListener('pointercancel',dashUp);
+WIDE.addEventListener('change',()=>{render();scrollGrid()});
 render();scrollGrid();
 setTimeout(()=>refreshSubs(false),1500);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshSubs(false)});
