@@ -1,7 +1,9 @@
 import { lumoSvg } from './figure.js';
 import { SAYINGS } from './sayings.js';
 import { getMedia, setMedia, resizeImage } from './media.js';
-import { pushState, enablePush, disablePush, testPush, isIOS } from './push.js';
+import { pushState, enablePush, disablePush, testPush, isIOS, FN_URL } from './push.js';
+import { parseICS, expandICS, toSpozliEvents } from './ics.js';
+import { SUPABASE_KEY } from './config.js';
 
 export function startApp(ctx){
 const USERS=ctx.users;
@@ -230,8 +232,9 @@ function openHabit(h,tpl){
 let todoFilter='alle';
 function renderTodo(){
   const modeSeg=`<div class="seg vseg" role="group" aria-label="Ansicht" style="margin-bottom:12px"><button data-tmode="todo" aria-pressed="${S.todoMode!=='habits'}">To-dos</button><button data-tmode="habits" aria-pressed="${S.todoMode==='habits'}">Habits</button></div>`;
-  if(S.todoMode==='habits')return modeSeg+renderHabits();
-  return modeSeg+renderTodoList()}
+  const both=FEAT().todo&&FEAT().habits;
+  if(S.todoMode==='habits')return (both?modeSeg:'')+renderHabits();
+  return (both?modeSeg:'')+renderTodoList()}
 function renderTodoList(){
   S.todos=S.todos||[];
   let list=S.todos.filter(todoVisible);
@@ -297,15 +300,17 @@ function applyDesign(){
   else el.innerHTML=`<div class="moodb n${media.mood.length}">${media.mood.map(u=>`<img src="${u}" alt="">`).join('')}</div>`;
 }
 const COLORS=['#8A5CF0','#2F7DEB','#0E9F9B','#DE4F8A','#E2861B','#2E9E4F','#D94848','#5B6584'];
-function applyColors(){const r=document.documentElement.style;Object.entries(CATS).forEach(([k,c])=>{const v=S.prefs&&S.prefs.colors[k];if(v)r.setProperty(c.v,v);else r.removeProperty(c.v)})}
+function applyColors(){const r=document.documentElement.style;Object.entries(CATS).forEach(([k,c])=>{if(c.ext)return;const v=S.prefs&&S.prefs.colors[k];if(v)r.setProperty(c.v,v);else r.removeProperty(c.v)})}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2));
 const fmtDay=s=>fromIso(s).toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'});
 const fmtShort=d=>d.toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit'})+', '+pad(d.getHours())+':'+pad(d.getMinutes());
 const remLabel=m=>{const p=REM_PRESETS.find(x=>x[0]===m);if(p)return p[1];if(m%10080===0)return (m/10080)+' Wochen vorher';if(m%1440===0)return (m/1440)+' Tage vorher';if(m%60===0)return (m/60)+' Std vorher';return m+' Min vorher'};
 
+const FEAT_DEF={cal:true,todo:true,habits:true,house:true,shop:true,countdown:true};
+const FEAT=()=>({...FEAT_DEF,...(S.prefs.features||{})});
 const DEFAULT_PREFS={morning:true,mtime:'07:30',mshop:true,mweekend:true,cats:{filmen:true,sevi_privat:true,gemeinsam:true,sie_privat:true},quiet:true,lumo:true,mquote:true,weekStart:1,defView:'month',kw:true,dayStart:7,defDur:60,colors:{}};
-const S={user:ctx.me,tab:'home',sel:TODAY,month:TODAY.slice(0,7),filter:'alle',defRem:60,pushOn:true,events:[],todos:[],chores:[],choreLog:[],list:[],habits:[],avatars:{},recent:[],notes:{},prefs:{...DEFAULT_PREFS},todoMode:'todo'};
+const S={user:ctx.me,tab:'home',sel:TODAY,month:TODAY.slice(0,7),filter:'alle',defRem:60,pushOn:true,events:[],todos:[],chores:[],choreLog:[],list:[],habits:[],avatars:{},calsubs:[],countdowns:[],recent:[],notes:{},prefs:{...DEFAULT_PREFS},todoMode:'todo'};
 try{const ui=JSON.parse(localStorage.getItem('spozli-ui')||'{}');if(ui.tab)S.tab=ui.tab;if(ui.view)S.view=ui.view;if(['alle','privat','gemeinsam'].includes(ui.filter))S.filter=ui.filter;if(ui.todoMode)S.todoMode=ui.todoMode}catch(e){}
 function load(){ctx.store.applyToState(S);S.prefs={...DEFAULT_PREFS,...S.prefs,cats:{...DEFAULT_PREFS.cats,...(S.prefs.cats||{})},colors:{...(S.prefs.colors||{})}}}
 load();if(!S.view)S.view=S.prefs.defView;
@@ -337,7 +342,8 @@ function visible(ev){
   if(S.filter==='gemeinsam')return o==='both';
   return true;
 }
-const eventsOn=d=>S.events.filter(ev=>occursOn(ev,d)&&visible(ev)).sort((a,b)=>(a.allday?'00':a.time).localeCompare(b.allday?'00':b.time));
+const allEvents=()=>FEAT().cal?S.events.concat(extEvents()):[];
+const eventsOn=d=>allEvents().filter(ev=>occursOn(ev,d)&&visible(ev)).sort((a,b)=>(a.allday?'00':a.time).localeCompare(b.allday?'00':b.time));
 function startOf(ev,d){const t=fromIso(d);if(ev.allday)t.setHours(9,0);else{const[h,m]=ev.time.split(':').map(Number);t.setHours(h,m)}return t}
 function remindees(cat){const o=CATS[cat].owner;return o==='both'?(USERS.sevi.name+' und '+USERS.sie.name):USERS[o].name}
 
@@ -347,11 +353,16 @@ const app=document.getElementById('app'),layer=document.getElementById('layer'),
 
 function render(){
   applyColors();applyDesign();
-  ['home','cal','todo','house','shop'].forEach(t=>document.getElementById('tab-'+t).setAttribute('aria-current',S.tab===t?'page':'false'));
-  fab.hidden=!(S.tab==='cal'||S.tab==='home'||S.tab==='todo'||S.tab==='house');
+  syncExtCats();const F=FEAT();
+  const tabOn={home:true,cal:F.cal,todo:F.todo||F.habits,house:F.house,shop:F.shop};
+  if(S.tab!=='rem'&&!tabOn[S.tab])S.tab='home';
+  if(S.tab==='todo'){if(!F.todo)S.todoMode='habits';if(!F.habits)S.todoMode='todo'}
+  ['home','cal','todo','house','shop'].forEach(t=>{const b=document.getElementById('tab-'+t);b.setAttribute('aria-current',S.tab===t?'page':'false');b.hidden=!tabOn[t]});
+  {const tb=document.getElementById('tab-todo');const lbl=!F.todo&&F.habits?'Habits':'To-dos';if(tb.lastChild&&tb.lastChild.nodeType===3&&tb.lastChild.textContent!==lbl)tb.lastChild.textContent=lbl}
+  fab.hidden=!(S.tab==='cal'||(S.tab==='home'&&F.cal)||S.tab==='todo'||S.tab==='house');
   const me=USERS[S.user].name;
   const hr=new Date().getHours();const greet=hr<11?'Guten Morgen':hr<18?'Hallo':'Guten Abend';
-  const titles={home:[fmtDay(TODAY),greet+', '+me],cal:['Unser Kalender','Kalender'],shop:['Unsere Liste','Einkauf'],todo:['Zu erledigen','To-dos'],house:['Wiederkehrend','Haushalt'],rem:['Für '+me,'Erinnerungen']};
+  const titles={home:[fmtDay(TODAY),greet+', '+me],cal:['Unser Kalender','Kalender'],shop:['Unsere Liste','Einkauf'],todo:S.todoMode==='habits'?['Jeden Tag ein bisschen','Habits']:['Zu erledigen','To-dos'],house:['Wiederkehrend','Haushalt'],rem:['Für '+me,'Erinnerungen']};
   const [sm,big]=titles[S.tab];
   let h=`<header class="top"><div class="hello"><small>${esc(sm)}</small><h1>${esc(big)}</h1></div>
   <div class="toprow">${avatarHtml(S.user,'avatar','id="who-btn" aria-label="Profil von '+esc(me)+'"')}<button class="gear" id="settings-btn" aria-label="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div></header>`;
@@ -369,29 +380,129 @@ function upcomingReminders(days){
   return out.sort((a,b)=>a.t-b.t);
 }
 function renderHome(){
+  const F=FEAT();
   const todays=eventsOn(TODAY).filter(relevant);
   const nowHM=pad(new Date().getHours())+':'+pad(new Date().getMinutes());
   const next=todays.find(ev=>ev.allday||ev.time>=nowHM);
-  const rems=upcomingReminders(14);
-  const big=next?`Als Nächstes: ${esc(next.title)}${next.allday?'':' um '+next.time}`:todays.length?'Für heute ist alles erledigt':'Heute steht nichts an';
+  const rems=F.cal?upcomingReminders(14):[];
+  const big=!F.cal?'Schön, dass du da bist':next?`Als Nächstes: ${esc(next.title)}${next.allday?'':' um '+next.time}`:todays.length?'Für heute ist alles erledigt':'Heute steht nichts an';
   const soon=[];for(let i=0;i<=2&&soon.length<4;i++){const d=addDays(TODAY,i);eventsOn(d).forEach(ev=>{if(soon.length<4)soon.push([ev,d])})}
+  const stats=[F.cal&&`<button class="stat" data-go="cal"><b>${todays.length}</b><span>Termine heute</span></button>`,F.shop&&`<button class="stat" data-go="shop"><b>${S.list.length}</b><span>Auf der Liste</span></button>`,F.cal&&`<button class="stat" data-go="rem"><b>${rems.filter(r=>r.t-Date.now()<864e5).length}</b><span>Erinnerungen 24 h</span></button>`,!F.cal&&F.todo&&`<button class="stat" data-go="todo"><b>${(S.todos||[]).filter(t=>!t.done&&t.due&&t.due<=TODAY).length}</b><span>To-dos heute</span></button>`,!F.cal&&F.habits&&habitPct()!==null&&`<button class="stat" data-go="habits"><b>${habitPct()}%</b><span>Habits</span></button>`].filter(Boolean);
+  const quick=[F.cal&&'<button data-quick="ev">+ Termin</button>',F.shop&&'<button data-quick="item">+ Artikel</button>',F.countdown&&!F.shop&&'<button data-cd="new">+ Countdown</button>'].filter(Boolean);
   return `<section class="hero"><div class="lab">Heute</div><div class="big">${big}</div>
-   <div class="stats"><button class="stat" data-go="cal"><b>${todays.length}</b><span>Termine heute</span></button><button class="stat" data-go="shop"><b>${S.list.length}</b><span>Auf der Liste</span></button><button class="stat" data-go="rem"><b>${rems.filter(r=>r.t-Date.now()<864e5).length}</b><span>Erinnerungen 24 h</span></button></div></section>
-  <div class="quick"><button data-quick="ev">+ Termin</button><button data-quick="item">+ Artikel</button></div>
+   ${stats.length?`<div class="stats">${stats.join('')}</div>`:''}</section>
+  ${quick.length?`<div class="quick">${quick.join('')}</div>`:''}
+  ${F.countdown?renderCountdowns():''}
   ${S.prefs.lumo!==false?renderSpozli():''}
-  ${habitPct()!==null?`<div class="section-title">Habits heute<button class="more" data-go="habits">Alle anzeigen</button></div>${habitHero(true)}`:''}
+  ${F.habits&&habitPct()!==null?`<div class="section-title">Habits heute<button class="more" data-go="habits">Alle anzeigen</button></div>${habitHero(true)}`:''}
   ${S.prefs.water&&S.prefs.water.on?waterCard():''}
-  <div class="section-title">Kalender<button class="more" data-go="cal">Alle anzeigen</button></div>
+  ${F.cal?`<div class="section-title">Kalender<button class="more" data-go="cal">Alle anzeigen</button></div>
   <div class="card"><div class="agenda">${soon.length?soon.map(([ev,d])=>evRow(ev,d,true)).join(''):'<div class="empty">Die nächsten drei Tage sind frei.</div>'}</div></div>
   ${(()=>{const out=[];for(let i=0;i<=90&&out.length<4;i++){const d=addDays(TODAY,i);eventsOn(d).filter(ev=>ev.kind&&ev.kind!=='event').forEach(ev=>{if(out.length<4)out.push([ev,d,i])})}
-    return out.length?`<div class="section-title">Geburtstage &amp; Jahrestage</div><div class="card"><div class="agenda">${out.map(([ev,d,i])=>`<button class="ev" style="--cat:var(${CATS[ev.cat].v})" data-ev="${ev.id}" data-d="${d}"><div class="time">${i===0?'Heute':i===1?'Morgen':'in '+i+' T.'}<small>${fromIso(d).toLocaleDateString('de-DE',{day:'numeric',month:'short'})}</small></div><div style="min-width:0"><div class="t">${esc(T(ev,d))}</div><div class="meta">${ev.note?esc(ev.note):''}</div></div><div class="bell">🔔 ${ev.rems.length}</div></button>`).join('')}</div></div>`:''})()}
-  ${(()=>{const l=(S.todos||[]).filter(t=>todoVisible(t)&&mine(t)&&!t.done&&t.due&&t.due<=TODAY);return `<div class="section-title">To-dos heute<button class="more" data-go="todo">Alle anzeigen</button></div><div class="card">${l.length?`<div class="todos">${l.slice(0,4).map(todoRow).join('')}</div>`:'<div class="empty" style="padding:8px">Heute nichts offen.</div>'}</div>`})()}
-  ${(()=>{const l=(S.chores||[]).filter(c=>choreMine(c)&&c.due<=TODAY);return l.length?`<div class="section-title">Haushalt heute<button class="more" data-go="house">Alle anzeigen</button></div><div class="todos">${l.slice(0,3).map(choreRow).join('')}</div>`:''})()}
-  <div class="section-title">Einkaufsliste<button class="more" data-go="shop">Liste öffnen</button></div>
-  <div class="card">${S.list.length?`<div class="mini-tiles">${S.list.slice(0,10).map(i=>`<span class="mini">${ICON[i.name]||'•'} ${esc(i.name)}${i.spec?' · '+esc(i.spec):''}</span>`).join('')}${S.list.length>10?`<span class="mini">+${S.list.length-10}</span>`:''}</div>`:'<div class="empty">Die Liste ist leer.</div>'}</div>
-  <div class="section-title">Nächste Erinnerungen<button class="more" data-go="rem">Alle</button></div>
-  <div class="rlist">${rems.slice(0,3).map(remRow).join('')||'<div class="empty">Keine Erinnerungen in den nächsten zwei Wochen.</div>'}</div>`;
+    return out.length?`<div class="section-title">Geburtstage &amp; Jahrestage</div><div class="card"><div class="agenda">${out.map(([ev,d,i])=>`<button class="ev" style="--cat:var(${CATS[ev.cat].v})" data-ev="${ev.id}" data-d="${d}"><div class="time">${i===0?'Heute':i===1?'Morgen':'in '+i+' T.'}<small>${fromIso(d).toLocaleDateString('de-DE',{day:'numeric',month:'short'})}</small></div><div style="min-width:0"><div class="t">${esc(T(ev,d))}</div><div class="meta">${ev.note?esc(ev.note):''}</div></div><div class="bell">🔔 ${ev.rems.length}</div></button>`).join('')}</div></div>`:''})()}`:''}
+  ${F.todo?(()=>{const l=(S.todos||[]).filter(t=>todoVisible(t)&&mine(t)&&!t.done&&t.due&&t.due<=TODAY);return `<div class="section-title">To-dos heute<button class="more" data-go="todo">Alle anzeigen</button></div><div class="card">${l.length?`<div class="todos">${l.slice(0,4).map(todoRow).join('')}</div>`:'<div class="empty" style="padding:8px">Heute nichts offen.</div>'}</div>`})():''}
+  ${F.house?(()=>{const l=(S.chores||[]).filter(c=>choreMine(c)&&c.due<=TODAY);return l.length?`<div class="section-title">Haushalt heute<button class="more" data-go="house">Alle anzeigen</button></div><div class="todos">${l.slice(0,3).map(choreRow).join('')}</div>`:''})():''}
+  ${F.shop?`<div class="section-title">Einkaufsliste<button class="more" data-go="shop">Liste öffnen</button></div>
+  <div class="card">${S.list.length?`<div class="mini-tiles">${S.list.slice(0,10).map(i=>`<span class="mini">${ICON[i.name]||'•'} ${esc(i.name)}${i.spec?' · '+esc(i.spec):''}</span>`).join('')}${S.list.length>10?`<span class="mini">+${S.list.length-10}</span>`:''}</div>`:'<div class="empty">Die Liste ist leer.</div>'}</div>`:''}
+  ${F.cal?`<div class="section-title">Nächste Erinnerungen<button class="more" data-go="rem">Alle</button></div>
+  <div class="rlist">${rems.slice(0,3).map(remRow).join('')||'<div class="empty">Keine Erinnerungen in den nächsten zwei Wochen.</div>'}</div>`:''}`;
 }
+/* ---------- Countdowns ---------- */
+const CD_ICONS=['⏳','🏖️','✈️','🎂','💍','🎄','🎉','🏠','🎬','❤️','🎓','⚽','🎁','🐣','⛷️','🎵'];
+const cdVisible=()=>(S.countdowns||[]).filter(c=>c.date>=TODAY).sort((a,b)=>a.date<b.date?-1:1);
+function cdText(c){const n=dayNum(c.date)-dayNum(TODAY);return n===0?['Heute!','']:n===1?['1','Tag bis']:[String(n),'Tage bis']}
+function renderCountdowns(){const l=cdVisible();
+  return `<div class="section-title">Countdowns<button class="more" data-cd="new">+ Neu</button></div>
+  ${l.length?`<div class="cdrow">${l.map(c=>{const[n,t]=cdText(c);return `<button class="cd${n==='Heute!'?' today':''}" data-cd="${c.id}" style="--cat:var(${c.vis==='shared'?'--c-both':S.user==='sevi'?'--c-sevi':'--c-her'})"><span class="cdi">${esc(c.icon||'⏳')}</span><b>${n}</b><span class="cdl">${t}</span><span class="cdt">${esc(c.title)}</span></button>`}).join('')}</div>`:`<button class="card cdempty" data-cd="new">⏳ Worauf freust du dich? Lege einen Countdown an, z. B. bis zu den Ferien.</button>`}`}
+function openCountdown(c,preset){
+  const isNew=!c;const f=c?JSON.parse(JSON.stringify(c)):{id:uid(),title:'',date:addDays(TODAY,14),icon:'⏳',vis:'shared',by:S.user,...(preset||{})};
+  openSheet(`<h3>${isNew?'Neuer Countdown':'Countdown bearbeiten'}</h3>
+  <div class="field"><label for="cd-title">Worauf freust du dich?</label><input class="inp" id="cd-title" value="${esc(f.title)}" placeholder="z. B. Ferien in Italien"></div>
+  <div class="field"><label for="cd-date">Datum</label><input type="date" class="inp" id="cd-date" value="${f.date}"></div>
+  <div class="field"><span class="lbl">Symbol</span><div class="tpls" id="cd-icons" style="flex-wrap:wrap">${CD_ICONS.map(i=>`<button type="button" data-cdi="${i}" aria-pressed="${f.icon===i}">${i}</button>`).join('')}</div></div>
+  <div class="field"><span class="lbl">Für wen</span><div class="seg vseg" id="cd-vis"><button type="button" data-cdv="private" aria-pressed="${f.vis!=='shared'}">Nur ich</button><button type="button" data-cdv="shared" aria-pressed="${f.vis==='shared'}">Beide</button></div></div>
+  <div class="btns">${isNew?'':'<button class="btn danger" id="cd-del">Löschen</button>'}<button class="btn primary" id="cd-save">Speichern</button></div>`,sh=>{
+    const $=q=>sh.querySelector(q);
+    sh.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+      if(b.dataset.cdi){f.icon=b.dataset.cdi;sh.querySelectorAll('[data-cdi]').forEach(x=>x.setAttribute('aria-pressed',x===b))}
+      if(b.dataset.cdv){f.vis=b.dataset.cdv;sh.querySelectorAll('[data-cdv]').forEach(x=>x.setAttribute('aria-pressed',x===b))}});
+    $('#cd-save').onclick=()=>{f.title=$('#cd-title').value.trim()||'Etwas Schönes';f.date=$('#cd-date').value||TODAY;
+      S.countdowns=S.countdowns||[];const i=S.countdowns.findIndex(x=>x.id===f.id);if(i>=0)S.countdowns[i]=f;else S.countdowns.push(f);save();closeSheet();render();const n=dayNum(f.date)-dayNum(TODAY);toast(n>0?`Noch ${n} ${n===1?'Tag':'Tage'}. Spozli freut sich mit!`:'Gespeichert')};
+    const d=$('#cd-del');if(d)d.onclick=()=>{if(d.dataset.sure){S.countdowns=S.countdowns.filter(x=>x.id!==f.id);save();closeSheet();render();toast('Gelöscht')}else{d.dataset.sure='1';d.textContent='Wirklich löschen?'}};
+    if(isNew&&!f.title)setTimeout(()=>$('#cd-title').focus(),50);
+  });
+}
+/* ---------- Kalender-Abos (Google, iCloud, Outlook …) ---------- */
+const extCache={};// id -> {at,err,vevents,expanded,key}
+function loadExt(id){if(extCache[id])return extCache[id];let v=null;try{v=JSON.parse(localStorage.getItem('spozli-ics-'+id)||'null')}catch(e){}extCache[id]=v||{at:0,err:null,vevents:[]};return extCache[id]}
+function storeExt(id,c){extCache[id]=c;try{localStorage.setItem('spozli-ics-'+id,JSON.stringify({at:c.at,err:c.err,vevents:c.vevents}))}catch(e){try{localStorage.removeItem('spozli-ics-'+id)}catch(_){}}}
+function syncExtCats(){
+  for(const k of Object.keys(CATS))if(k.startsWith('ext:'))delete CATS[k];
+  (S.calsubs||[]).forEach((c,i)=>{const v='--c-ext'+i;document.documentElement.style.setProperty(v,c.color||'#5B6584');CATS['ext:'+c.id]={label:c.name||'Kalender',owner:c.vis==='shared'?'both':S.user,v,sym:'📅 ',ext:true}});
+}
+function extEvents(){const out=[];const from=addDays(TODAY,-120),to=addDays(TODAY,400);
+  for(const sub of S.calsubs||[]){const c=loadExt(sub.id);const key=c.at+'|'+from;
+    if(c.key!==key){try{c.expanded=expandICS(c.vevents||[],from,to,'x'+sub.id)}catch(e){c.expanded=[]}c.key=key}
+    for(const e of c.expanded)out.push({...e,cat:'ext:'+sub.id,sub:sub.id})}
+  return out}
+async function authHeaders(){const{data}=await ctx.supabase.auth.getSession();const t=data?.session?.access_token;return {'Content-Type':'application/json',apikey:SUPABASE_KEY,...(t?{Authorization:'Bearer '+t}:{})}}
+async function fetchSub(sub){
+  const c=loadExt(sub.id);
+  try{const r=await fetch(FN_URL,{method:'POST',headers:await authHeaders(),body:JSON.stringify({action:'ics',url:sub.url})});
+    const txt=await r.text();if(!r.ok){let m='Fehler '+r.status;try{m=JSON.parse(txt).error||m}catch(e){}throw new Error(m)}
+    const vev=parseICS(txt);storeExt(sub.id,{at:Date.now(),err:null,vevents:vev});return vev.length}
+  catch(e){storeExt(sub.id,{...c,err:e.message||String(e),at:c.at});throw e}}
+let subsBusy=false;
+async function refreshSubs(force){if(subsBusy||!navigator.onLine||!FEAT().cal)return;subsBusy=true;let changed=false;
+  for(const sub of S.calsubs||[]){const c=loadExt(sub.id);if(!force&&Date.now()-c.at<30*60000)continue;try{await fetchSub(sub);changed=true}catch(e){changed=true}}
+  subsBusy=false;if(changed&&!layer.innerHTML)render()}
+const SUBCOLORS=['#5B6584','#0E9F9B','#8A5CF0','#E2861B','#D94848','#2E9E4F','#B5651D','#7A8B99'];
+function openSub(sub){
+  const isNew=!sub;const f=sub?{...sub}:{id:uid(),url:'',name:'',color:SUBCOLORS[(S.calsubs||[]).length%SUBCOLORS.length],vis:'private',by:S.user};
+  const c=isNew?null:loadExt(f.id);
+  openSheet(`<h3>${isNew?'Kalender abonnieren':esc(f.name||'Kalender')}</h3>
+  <div class="field"><label for="sb-url">Kalender-Link (iCal / ICS)</label><input class="inp" id="sb-url" value="${esc(f.url)}" placeholder="https://… oder webcal://…" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+  <details class="cat helpbox"><summary>Wo finde ich den Link?</summary><div class="hint" style="margin:6px 2px">
+   <b>Google:</b> calendar.google.com am Computer → Einstellungen → Kalender wählen → „Privatadresse im iCal-Format“ kopieren.<br>
+   <b>iCloud / Apple:</b> Kalender-App → Kalender (ⓘ) → „Öffentlicher Kalender“ einschalten → Link teilen/kopieren.<br>
+   <b>Outlook:</b> outlook.com → Einstellungen → Kalender → Freigegebene Kalender → „Kalender veröffentlichen“ → ICS-Link kopieren.</div></details>
+  <div class="field"><label for="sb-name">Name</label><input class="inp" id="sb-name" value="${esc(f.name)}" placeholder="z. B. Arbeit, Familie"></div>
+  <div class="field"><span class="lbl">Farbe</span><div class="swatches" style="justify-content:flex-start">${SUBCOLORS.map(col=>`<button type="button" class="sw" style="background:${col}" data-sbc="${col}" aria-pressed="${f.color===col}" aria-label="Farbe"></button>`).join('')}</div></div>
+  <div class="field"><span class="lbl">Wer sieht die Termine?</span><div class="seg vseg"><button type="button" data-sbv="private" aria-pressed="${f.vis!=='shared'}">Nur ich</button><button type="button" data-sbv="shared" aria-pressed="${f.vis==='shared'}">Beide</button></div></div>
+  ${c?`<p class="hint">${c.err?'⚠️ '+esc(c.err):c.at?'Zuletzt aktualisiert: '+new Date(c.at).toLocaleString('de-DE',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})+' · '+(c.vevents||[]).length+' Einträge':'Noch nicht geladen'}</p>`:''}
+  <p class="hint">Abonnierte Termine aktualisieren sich automatisch und sind in Spozli nur zum Ansehen. Ändern kannst du sie im ursprünglichen Kalender.</p>
+  <div class="btns">${isNew?'':'<button class="btn danger" id="sb-del">Entfernen</button>'}<button class="btn primary" id="sb-save">${isNew?'Abonnieren':'Speichern & aktualisieren'}</button></div>`,sh=>{
+    const $=q=>sh.querySelector(q);
+    sh.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+      if(b.dataset.sbc){f.color=b.dataset.sbc;sh.querySelectorAll('[data-sbc]').forEach(x=>x.setAttribute('aria-pressed',x===b))}
+      if(b.dataset.sbv){f.vis=b.dataset.sbv;sh.querySelectorAll('[data-sbv]').forEach(x=>x.setAttribute('aria-pressed',x===b))}});
+    $('#sb-save').onclick=async()=>{f.url=$('#sb-url').value.trim();f.name=$('#sb-name').value.trim()||'Kalender';
+      if(!/^(https?|webcals?):\/\//i.test(f.url)){toast('Bitte einen Link einfügen, der mit https:// oder webcal:// beginnt');return}
+      const b=$('#sb-save');b.disabled=true;b.textContent='Wird geladen …';
+      try{const n=await fetchSub(f);S.calsubs=S.calsubs||[];const i=S.calsubs.findIndex(x=>x.id===f.id);if(i>=0)S.calsubs[i]=f;else S.calsubs.push(f);save();closeSheet();render();toast(`${f.name}: ${n} Einträge geladen`)}
+      catch(e){b.disabled=false;b.textContent=isNew?'Abonnieren':'Speichern & aktualisieren';toast('Konnte nicht geladen werden ('+(e.message||e)+')')}};
+    const d=$('#sb-del');if(d)d.onclick=()=>{if(d.dataset.sure){S.calsubs=S.calsubs.filter(x=>x.id!==f.id);try{localStorage.removeItem('spozli-ics-'+f.id)}catch(e){}delete extCache[f.id];save();closeSheet();render();toast('Abo entfernt')}else{d.dataset.sure='1';d.textContent='Wirklich entfernen?'}};
+    if(isNew)setTimeout(()=>$('#sb-url').focus(),50);
+  });
+}
+function openImport(){
+  let found=[];let cat=PICK[S.user][0][0];
+  openSheet(`<h3>Kalender-Datei importieren</h3><p class="hint" style="margin-top:-6px">Wähle eine .ics-Datei (z. B. aus Google, Outlook oder Apple exportiert). Die Termine werden einmalig in Spozli übernommen und sind danach normale Spozli-Termine.</p>
+  <div class="btns"><button class="btn" id="im-pick">Datei wählen</button></div><input type="file" id="im-file" accept=".ics,text/calendar" hidden>
+  <div id="im-res"></div>`,sh=>{
+    const $=q=>sh.querySelector(q);$('#im-pick').onclick=()=>$('#im-file').click();
+    $('#im-file').onchange=async()=>{const fl=$('#im-file').files[0];if(!fl)return;try{found=toSpozliEvents(parseICS(await fl.text()),addDays(TODAY,-1))}catch(e){found=[]}
+      $('#im-res').innerHTML=found.length?`<p><b>${found.length} Termine gefunden</b> (ab heute, Wiederholungen bleiben erhalten).</p>
+       <div class="field"><span class="lbl">Für wen</span><div class="catpick">${PICK[S.user].map(([k,l])=>`<button type="button" data-imc="${k}" style="--cat:var(${CATS[k].v})" aria-pressed="${k===cat}">${l}</button>`).join('')}</div></div>
+       <div class="btns"><button class="btn primary" id="im-go">Importieren</button></div>`:'<p class="hint">Keine kommenden Termine in dieser Datei gefunden.</p>'};
+    sh.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+      if(b.dataset.imc){cat=b.dataset.imc;sh.querySelectorAll('[data-imc]').forEach(x=>x.setAttribute('aria-pressed',x===b))}
+      if(b.id==='im-go'){for(const ev of found)S.events.push({id:uid(),kind:'event',cat,nag:0,by:S.user,rems:ev.allday?[]:[S.defRem],...ev});save();closeSheet();render();toast(found.length+' Termine importiert')}});
+  });
+}
+/* ---------- Spozli im Apple Kalender (Abo-Link) ---------- */
+const feedUrl=()=>S.prefs.feedToken?FN_URL.replace(/^https:/,'webcal:')+'?action=feed&t='+S.prefs.feedToken:null;
+const newToken=()=>[...crypto.getRandomValues(new Uint8Array(18))].map(b=>b.toString(16).padStart(2,'0')).join('');
 function remRow(r){
   const c=CATS[r.ev.cat];const isToday=iso(r.t)===TODAY,isTom=iso(r.t)===addDays(TODAY,1);
   const dl=isToday?'Heute':isTom?'Morgen':r.t.toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'numeric'});
@@ -518,7 +629,7 @@ function evRow(ev,d,withDate){
   return `<button class="ev" style="--cat:var(${c.v})" data-ev="${ev.id}" data-d="${d}">
    <div class="time">${evTime(ev,d)}${withDate?`<small>${dl}</small>`:''}</div>
    <div style="min-width:0"><div class="t">${c.sym}${esc(T(ev,d))}</div><div class="meta"><span class="tag">${c.label}</span>${multi(ev,d)?`<span>· Tag ${multi(ev,d).i+1}/${multi(ev,d).n}</span>`:''}${c.owner==='both'&&ev.by&&USERS[ev.by]?`<span>· von ${esc(USERS[ev.by].name)}</span>`:''}${ev.kind&&ev.kind!=='event'?`<span>· ${ev.kind==='bday'?'Geburtstag':'Jahrestag'}</span>`:ev.repeat!=='none'?`<span>· ${REPEAT[ev.repeat]}</span>`:''}</div></div>
-   <div class="bell" title="Erinnerungen">🔔 ${ev.rems.length}</div></button>`;
+   ${ev.ext?'':`<div class="bell" title="Erinnerungen">🔔 ${ev.rems.length}</div>`}</button>`;
 }
 
 let query='';
@@ -567,7 +678,12 @@ function swipeClose(sh){
 }
 
 function openDetail(id,d){
-  const ev=S.events.find(x=>x.id===id);if(!ev)return;
+  const ev=S.events.find(x=>x.id===id)||extEvents().find(x=>x.id===id);if(!ev)return;
+  if(ev.ext){const c=CATS[ev.cat]||{label:'Kalender',v:'--muted',sym:''};
+    openSheet(`<h3>${esc(ev.title)}</h3><dl class="kv"><dt>Wann</dt><dd>${ev.endDate?fmtDay(ev.date)+(ev.allday?'':', '+ev.time+' Uhr')+' bis '+fmtDay(ev.endDate)+(ev.allday?'':', '+ev.end+' Uhr'):fmtDay(ev.date)+(ev.allday?', ganztägig':', '+ev.time+(ev.end?'–'+ev.end:'')+' Uhr')}</dd>
+     <dt>Kalender</dt><dd><span class="tag" style="--cat:var(${c.v})">📅 ${esc(c.label)}</span></dd>${ev.loc?`<dt>Ort</dt><dd>${esc(ev.loc)}</dd>`:''}<dt>Sichtbar für</dt><dd>${c.owner==='both'?USERS.sevi.name+' und '+USERS.sie.name:'Nur dich'}</dd></dl>
+     <p class="hint">Abonnierter Termin, nur zum Ansehen. Ändern kannst du ihn im ursprünglichen Kalender.</p>
+     <div class="btns">${FEAT().countdown?'<button class="btn" id="mkcd">⏳ Countdown</button>':''}<button class="btn primary" id="ok">Fertig</button></div>`,s=>{s.querySelector('#ok').onclick=closeSheet;const m=s.querySelector('#mkcd');if(m)m.onclick=()=>openCountdown(null,{title:ev.title,date:ev.date,vis:c.owner==='both'?'shared':'private'})});return}
   const c=CATS[ev.cat];const st=startOf(ev,startOfOcc(ev,d));
   const rems=[...ev.rems].sort((a,b)=>b-a).map(m=>`<div class="rem"><span>${remLabel(m)}</span><small>${fmtShort(new Date(st-m*6e4))}</small></div>`).join('')||'<div class="who">Keine Erinnerung</div>';
   openSheet(`<h3>${esc(T(ev,d))}</h3>
@@ -580,8 +696,9 @@ function openDetail(id,d){
   ${ev.note?`<dt>Notiz</dt><dd>${esc(ev.note)}</dd>`:''}
   <dt>Eingetragen</dt><dd>von ${USERS[ev.by].name}</dd></dl>
   <div class="field"><span class="lbl">Erinnerungen</span><div class="rems">${rems}</div></div>
-  <div class="btns"><button class="btn" id="test">Erinnerung testen</button><button class="btn primary" id="edit">Bearbeiten</button></div>`,s=>{
+  <div class="btns"><button class="btn" id="test">Erinnerung testen</button>${FEAT().countdown?'<button class="btn" id="mkcd">⏳ Countdown</button>':''}<button class="btn primary" id="edit">Bearbeiten</button></div>`,s=>{
     s.querySelector('#edit').onclick=()=>openForm(ev);
+    const m=s.querySelector('#mkcd');if(m)m.onclick=()=>openCountdown(null,{title:ev.title,date:startOfOcc(ev,d)>=TODAY?startOfOcc(ev,d):d,icon:ev.kind==='bday'?'🎂':ev.kind==='anniv'?'💍':'⏳',vis:CATS[ev.cat].owner==='both'?'shared':'private'});
     s.querySelector('#test').onclick=()=>{closeSheet();const m=ev.rems.length?Math.min(...ev.rems):0;push(ev,m)};
   });
 }
@@ -679,6 +796,20 @@ function openSettings(){
     ${D.bg!=='none'?`<label class="setting" style="padding-inline:0"><span>Schleier über dem Hintergrund</span><input type="range" min="0" max="80" step="5" id="d-veil" value="${D.veil}" style="max-width:45%"></label>`:''}
     ${D.bg==='photo'||D.bg==='mood'?'<p class="hint" style="margin:2px 0 0">Fotos bleiben nur auf diesem Gerät gespeichert.</p>':''}
     <input type="file" accept="image/*" id="d-file" hidden><input type="file" accept="image/*" id="d-mfile" multiple hidden></div></div>
+  <div class="sgroup">Funktionen für ${esc(USERS[S.user].name)}</div><div class="card">
+   ${[['cal','Kalender','📅'],['todo','To-dos','✅'],['habits','Habits','🔥'],['house','Haushalt','🧹'],['shop','Einkaufsliste','🛒'],['countdown','Countdowns','⏳']].map(([k,l,i])=>`<div class="setting"><span>${i} ${l}</span><button class="switch" role="switch" data-feat="${k}" aria-checked="${FEAT()[k]}" aria-label="${l}"></button></div>`).join('')}
+   <div class="setting"><span>🌱 Spozli-Sprüche</span><button class="switch" role="switch" data-sp="lumo" aria-checked="${P.lumo!==false}" aria-label="Spozli-Sprüche"></button></div>
+   <div class="setting"><span>💧 Wasser trinken</span><button class="switch" role="switch" data-featw="1" aria-checked="${!!(P.water&&P.water.on)}" aria-label="Wasser trinken"></button></div>
+   <p class="hint" style="margin:6px 2px 2px">Ausgeschaltetes verschwindet aus der Leiste und von der Startseite. Deine Daten bleiben erhalten.</p></div>
+  ${FEAT().cal?`<div class="sgroup">Andere Kalender</div><div class="card">
+   ${(S.calsubs||[]).map(c=>{const x=loadExt(c.id);return `<div class="setting"><span class="tag" style="--cat:${c.color};font-size:14px;color:var(--ink)">${esc(c.name)}${c.vis==='shared'?' · Beide':''}${x.err?' ⚠️':''}</span><button class="today-btn" data-sub="${c.id}">Bearbeiten</button></div>`}).join('')}
+   <div class="setting"><div><span>Kalender abonnieren</span><div class="hint" style="margin:0">Google, iCloud, Outlook … per Link, aktualisiert sich automatisch</div></div><button class="today-btn" id="sub-new">+ Abo</button></div>
+   <div class="setting"><div><span>Datei importieren</span><div class="hint" style="margin:0">Einmalig aus einer .ics-Datei übernehmen</div></div><button class="today-btn" id="imp">Import</button></div></div>
+  <div class="sgroup">Spozli im iPhone-Kalender</div><div class="card">
+   ${feedUrl()?`<div class="setting col"><span>Deine Spozli-Termine als Kalender-Abo</span><div class="feedurl">${esc(feedUrl())}</div>
+    <div class="btns" style="margin-top:6px"><a class="btn primary" href="${esc(feedUrl())}">Im Kalender abonnieren</a><button class="btn" id="feed-copy">Link kopieren</button></div>
+    <button class="more" id="feed-new" style="margin-top:6px">Neuen Link erzeugen (alter wird ungültig)</button></div>`:`<div class="setting"><div><span>Spozli-Termine im Apple Kalender</span><div class="hint" style="margin:0">Deine Termine erscheinen als Abo im iPhone-Kalender (nur lesen)</div></div><button class="today-btn" id="feed-new">Link erstellen</button></div>`}
+   <p class="hint" style="margin:6px 2px 2px">Enthält deine privaten und die gemeinsamen Termine. Teile den Link mit niemandem. Der iPhone-Kalender aktualisiert das Abo selbst (Einstellungen → Kalender → Accounts → Abrufen).</p></div>`:''}
   <div class="sgroup">Kalender</div><div class="card">
    <div class="setting"><label for="s-ws">Erster Wochentag</label>${sel('s-ws',[[1,'Montag'],[0,'Sonntag']],P.weekStart)}</div>
    <div class="setting"><label for="s-view">Standardansicht</label>${sel('s-view',[['agenda','Liste'],['day','Tag'],['3day','3 Tage'],['month','Monat']],P.defView)}</div>
@@ -689,7 +820,7 @@ function openSettings(){
    <div class="setting"><label for="s-rem">Standard-Erinnerung</label>${sel('s-rem',REM_PRESETS,S.defRem)}</div>
    <div class="setting"><span>Zeitzone</span><span class="hint" style="margin:0">${esc(Intl.DateTimeFormat().resolvedOptions().timeZone||'Automatisch')} (automatisch)</span></div></div>
   <div class="sgroup">Kategorien &amp; Farben</div><div class="card">
-   ${Object.entries(CATS).filter(([,c])=>c.owner===S.user||c.owner==='both').map(([k,c])=>{const cur=P.colors[k]||'';return `<div class="setting col"><div class="head"><span class="tag" style="--cat:var(${c.v});font-size:14px">${c.label}</span>${cur?`<button class="more" data-reset="${k}">Standard</button>`:''}</div><div class="swatches" style="justify-content:flex-start">${COLORS.map(col=>`<button class="sw" style="background:${col}" data-col="${k}|${col}" aria-label="Farbe ${col}" aria-pressed="${cur===col}"></button>`).join('')}</div></div>`}).join('')}</div>
+   ${Object.entries(CATS).filter(([,c])=>!c.ext&&(c.owner===S.user||c.owner==='both')).map(([k,c])=>{const cur=P.colors[k]||'';return `<div class="setting col"><div class="head"><span class="tag" style="--cat:var(${c.v});font-size:14px">${c.label}</span>${cur?`<button class="more" data-reset="${k}">Standard</button>`:''}</div><div class="swatches" style="justify-content:flex-start">${COLORS.map(col=>`<button class="sw" style="background:${col}" data-col="${k}|${col}" aria-label="Farbe ${col}" aria-pressed="${cur===col}"></button>`).join('')}</div></div>`}).join('')}</div>
   <div class="sgroup">Spozli</div><div class="card"><div class="setting"><div><span>Spozli auf der Startseite</span><div class="hint" style="margin:0">Täglicher Gedanke, Atemübung, Notizen</div></div>${sw('lumo',P.lumo!==false,'Spozli anzeigen')}</div></div>
   <div class="sgroup">Benachrichtigungen</div><div class="card"><div class="setting"><span>Push, Morgen-Übersicht, Nachtruhe, alle Erinnerungen</span><button class="today-btn" id="s-go-rem">Öffnen</button></div></div>
   <div class="btns" style="margin-top:18px"><button class="btn primary" id="s-done">Fertig</button></div>`,sh=>{
@@ -706,6 +837,13 @@ function openSettings(){
       save();render();toast('Gespeichert')});
     sh.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
       if(b.dataset.dtheme){setD({theme:b.dataset.dtheme});return}
+      if(b.dataset.feat){P.features={...FEAT_DEF,...P.features,[b.dataset.feat]:!FEAT()[b.dataset.feat]};upd();return}
+      if(b.dataset.featw){P.water={...WATER_DEF,...P.water,on:!(P.water&&P.water.on)};upd();return}
+      if(b.dataset.sub){openSub(S.calsubs.find(x=>x.id===b.dataset.sub));return}
+      if(b.id==='sub-new'){openSub(null);return}
+      if(b.id==='imp'){openImport();return}
+      if(b.id==='feed-new'){P.feedToken=newToken();upd();toast('Abo-Link erstellt');return}
+      if(b.id==='feed-copy'){navigator.clipboard?.writeText(feedUrl()).then(()=>toast('Link kopiert'),()=>{});return}
       if(b.dataset.dacc!==undefined){setD({accent:b.dataset.dacc||null});return}
       if(b.dataset.dgrad){setD({grad:b.dataset.dgrad});return}
       if(b.dataset.dbg){const k=b.dataset.dbg;if(k==='photo'&&!media.photo){sh.querySelector('#d-file').click();return}if(k==='mood'&&!media.mood.length){sh.querySelector('#d-mfile').click();return}setD({bg:k});return}
@@ -810,6 +948,7 @@ app.addEventListener('click',e=>{
   if(t.dataset.view){S.view=t.dataset.view;save();render();scrollGrid();return}
   if(t.dataset.gnav){S.sel=addDays(S.sel,+t.dataset.gnav);S.month=S.sel.slice(0,7);save();render();scrollGrid();return}
   if(t.dataset.slot){const[d,tm]=t.dataset.slot.split('|');openForm(null,{date:d,time:tm});return}
+  if(t.dataset.cd){if(t.dataset.cd==='new')openCountdown(null);else openCountdown(S.countdowns.find(x=>x.id===t.dataset.cd));return}
   if(t.dataset.go==='habits'){S.tab='todo';S.todoMode='habits';save();render();window.scrollTo(0,0);return}
   if(t.dataset.go){S.tab=t.dataset.go;save();render();window.scrollTo(0,0);return}
   if(t.dataset.quick==='ev'){openForm(null);return}
@@ -840,6 +979,9 @@ function scrollGrid(){const g=document.getElementById('gbody');if(g)g.scrollTop=
 document.querySelectorAll('nav.tabs [data-tab]').forEach(b=>b.addEventListener('click',scrollGrid));
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()});
 render();scrollGrid();
+setTimeout(()=>refreshSubs(false),1500);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshSubs(false)});
+window.addEventListener('online',()=>refreshSubs(false));
 let pendingRender=false;
 const typing=()=>{const a=document.activeElement;return a&&(a.id==='q'||a.id==='tq')};
 app.addEventListener('focusout',()=>{setTimeout(()=>{if(pendingRender&&!typing()){pendingRender=false;render()}},50)});

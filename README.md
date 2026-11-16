@@ -15,7 +15,7 @@ Gemeinsamer Kalender, To-dos, Haushalt und Einkaufsliste für zwei Personen, als
 ## Push-Nachrichten einrichten (einmalig)
 
 1. `supabase/schema.sql` im Supabase SQL Editor erneut komplett ausführen (legt Push-Tabellen, Trigger und den Minuten-Takt an).
-2. Supabase → Edge Functions → „Deploy a new function“ → „Via Editor“. Name: `spozli-push`. Inhalt von `supabase/functions/spozli-push/index.ts` einfügen, „Deploy“.
+2. Supabase → Edge Functions → „Deploy a new function“ → „Via Editor“. Name: `smooth-task` (so heißt sie bei uns). Inhalt von `supabase/functions/spozli-push/index.ts` einfügen, „Deploy“.
 3. In den Details der Funktion „Verify JWT“ (bzw. „Enforce JWT verification“) ausschalten und speichern. Die Funktion prüft selbst einen geheimen Schlüssel aus der Datenbank.
 4. In der installierten App: Zahnrad → Benachrichtigungen → „Push aktivieren“, dann „Test senden“.
 

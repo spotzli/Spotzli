@@ -368,3 +368,16 @@ body.has-bg{background:var(--bg)}
 body.has-bg header.top,body.has-bg::before{background:color-mix(in srgb,var(--bg) 72%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 body.has-bg header.top{margin-inline:-16px;padding-inline:16px}
 body.has-bg .section-title{text-shadow:0 1px 8px color-mix(in srgb,var(--bg) 80%,transparent)}
+/* ---------- Update 3: Countdowns, Kalender-Abos ---------- */
+.cdrow{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;margin-inline:-16px;padding-inline:16px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.cdrow::-webkit-scrollbar{display:none}
+.cd{flex:0 0 auto;min-width:118px;max-width:150px;scroll-snap-align:start;border:0;border-radius:18px;padding:12px 14px;text-align:left;display:flex;flex-direction:column;gap:1px;color:#fff;background:linear-gradient(150deg,var(--cat),color-mix(in srgb,var(--cat) 60%,#000 0%) 60%,color-mix(in srgb,var(--cat) 70%,#1B2140));box-shadow:var(--shadow-s)}
+.cd .cdi{font-size:22px;line-height:1.2}
+.cd b{font-family:var(--f-display);font-size:30px;font-weight:800;line-height:1.05}
+.cd.today b{font-size:22px}
+.cd .cdl{font-size:12px;opacity:.85}
+.cd .cdt{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cdempty{width:100%;border:1.5px dashed var(--line);text-align:left;color:var(--muted);font-size:14px;box-shadow:none}
+.feedurl{font-size:12px;word-break:break-all;background:var(--surface-2);border-radius:10px;padding:8px 10px;color:var(--muted);user-select:all;-webkit-user-select:all}
+a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.helpbox summary{font-size:14px}

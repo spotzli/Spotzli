@@ -177,7 +177,7 @@ async function tick() {
   const [members, subs, items] = await Promise.all([
     sql`select household_id, user_id, slot, name from public.members`,
     sql`select endpoint, p256dh, auth, user_id from public.push_subs`,
-    sql`select id, household_id, owner_id, kind, visibility, data from public.items where not deleted and kind in ('event','todo','chore','habit','prefs','shop')`,
+    sql`select id, household_id, owner_id, kind, visibility, data from public.items where not deleted and kind in ('event','todo','chore','habit','prefs','shop','countdown')`,
   ]);
   const subsBy: Record<string, Sub[]> = {};
   for (const s of subs as any[]) (subsBy[s.user_id] ||= []).push(s);
@@ -190,6 +190,7 @@ async function tick() {
     const pr = prefsBy[m.user_id] || {}, P = pr.prefs || {};
     if (pr.pushOn === false) continue;
     const tz = P.tz || 'Europe/Zurich';
+    const F = P.features || {};
     const loc = partsIn(now, tz), today = loc.date;
     const hh = (items as any[]).filter((i) => i.household_id === m.household_id);
     const cand: { key: string; msg: any }[] = [];
@@ -205,6 +206,7 @@ async function tick() {
     };
     // Termine, Geburtstage, Jahrestage
     for (const it of hh) {
+      if (F.cal === false) break;
       if (it.kind !== 'event' || !(it.visibility === 'shared' || it.owner_id === m.user_id)) continue;
       const ev = it.data || {};
       if (!ev.date || (P.cats && P.cats[ev.cat] === false)) continue;
@@ -230,6 +232,7 @@ async function tick() {
     }
     // To-dos
     for (const it of hh) {
+      if (F.todo === false) break;
       if (it.kind !== 'todo' || it.owner_id !== m.user_id) continue;
       const t = it.data || {};
       if (t.done) continue;
@@ -242,6 +245,7 @@ async function tick() {
     }
     // Haushalt
     for (const it of hh) {
+      if (F.house === false) break;
       if (it.kind !== 'chore') continue;
       const c = it.data || {};
       if (!c.remind || !c.due) continue;
@@ -251,6 +255,7 @@ async function tick() {
     }
     // Habits
     for (const it of hh) {
+      if (F.habits === false) break;
       if (it.kind !== 'habit' || it.owner_id !== m.user_id) continue;
       const h = it.data || {};
       if (!h.remind || !(h.rdays || [0, 1, 2, 3, 4, 5, 6]).includes(loc.wd)) continue;
@@ -269,16 +274,21 @@ async function tick() {
       const at = zoned(today, P.mtime || '07:30', tz);
       if (at > now - LOOK && at <= now) {
         const lines: string[] = [];
-        const evs = hh.filter((it) => it.kind === 'event' && (it.visibility === 'shared' || it.owner_id === m.user_id) && it.data?.date && occursOn(it.data, today) && !(P.cats && P.cats[it.data.cat] === false))
+        const evs = F.cal === false ? [] : hh.filter((it) => it.kind === 'event' && (it.visibility === 'shared' || it.owner_id === m.user_id) && it.data?.date && occursOn(it.data, today) && !(P.cats && P.cats[it.data.cat] === false))
           .map((it) => it.data).sort((a: any, b: any) => (a.allday ? '00' : a.time || '').localeCompare(b.allday ? '00' : b.time || ''));
-        lines.push(evs.length ? evs.map((e: any) => `${e.allday || !e.time ? 'Ganztägig' : e.time}  ${evTitle(e, today)}`).join('\n') : 'Heute keine Termine.');
-        const td = hh.filter((it) => it.kind === 'todo' && it.owner_id === m.user_id && !it.data?.done && it.data?.due && it.data.due <= today).map((it) => it.data.title);
+        if (F.cal !== false) lines.push(evs.length ? evs.map((e: any) => `${e.allday || !e.time ? 'Ganztägig' : e.time}  ${evTitle(e, today)}`).join('\n') : 'Heute keine Termine.');
+        const td = F.todo === false ? [] : hh.filter((it) => it.kind === 'todo' && it.owner_id === m.user_id && !it.data?.done && it.data?.due && it.data.due <= today).map((it) => it.data.title);
         if (td.length) lines.push('To-dos: ' + td.slice(0, 3).join(', ') + (td.length > 3 ? ' …' : ''));
-        const hc = hh.filter((it) => it.kind === 'chore' && it.data?.due && it.data.due <= today && (it.data.assign === 'both' || (it.data.assign === 'alt' ? it.data.next === m.slot : it.data.assign === m.slot))).map((it) => it.data.title);
+        const hc = F.house === false ? [] : hh.filter((it) => it.kind === 'chore' && it.data?.due && it.data.due <= today && (it.data.assign === 'both' || (it.data.assign === 'alt' ? it.data.next === m.slot : it.data.assign === m.slot))).map((it) => it.data.title);
         if (hc.length) lines.push('Haushalt: ' + hc.join(', '));
-        const hb = hh.filter((it) => it.kind === 'habit' && it.owner_id === m.user_id).length;
+        const hb = F.habits === false ? 0 : hh.filter((it) => it.kind === 'habit' && it.owner_id === m.user_id).length;
         if (hb) lines.push(`Habits: ${hb} für heute`);
-        if (P.mshop !== false) { const sh = hh.filter((it) => it.kind === 'shop'); if (sh.length) lines.push(`Einkauf: ${sh.length} Artikel`); }
+        if (F.countdown !== false) {
+          const cds = hh.filter((it) => it.kind === 'countdown' && (it.visibility === 'shared' || it.owner_id === m.user_id) && it.data?.date >= today)
+            .map((it) => it.data).sort((a: any, b: any) => a.date.localeCompare(b.date)).slice(0, 2);
+          for (const c of cds) { const n = dayNum(c.date) - dayNum(today); lines.push(n === 0 ? `${c.icon || '⏳'} Heute: ${c.title}!` : `${c.icon || '⏳'} Noch ${n} ${n === 1 ? 'Tag' : 'Tage'} bis ${c.title}`); }
+        }
+        if (P.mshop !== false && F.shop !== false) { const sh = hh.filter((it) => it.kind === 'shop'); if (sh.length) lines.push(`Einkauf: ${sh.length} Artikel`); }
         if (P.mquote !== false && P.lumo !== false) { const q = await saying(today); if (q) lines.push('Spozli: ' + q); }
         cand.push({ key: `${m.user_id}:mo:${today}`, msg: { title: `Guten Morgen, ${m.name}! Das steht heute an`, body: lines.join('\n'), tag: 'morning', url: APP_URL } });
       }
@@ -332,6 +342,79 @@ async function newItem(id: string) {
   return sent;
 }
 
+// ---------- Kalender: fremden Kalender abrufen (nur für angemeldete Nutzer) ----------
+async function userFromReq(req: Request) {
+  const auth = req.headers.get('authorization') || '';
+  const apikey = req.headers.get('apikey') || Deno.env.get('SUPABASE_ANON_KEY') || '';
+  if (!auth.startsWith('Bearer ')) return null;
+  const r = await fetch(`${Deno.env.get('SUPABASE_URL')}/auth/v1/user`, { headers: { Authorization: auth, apikey } });
+  if (!r.ok) return null;
+  const u = await r.json().catch(() => null);
+  return u?.id ? u : null;
+}
+async function fetchIcs(raw: string) {
+  let url = String(raw || '').trim().replace(/^webcals?:\/\//i, 'https://');
+  if (!/^https?:\/\//i.test(url)) throw new Error('Ungültiger Link');
+  const host = new URL(url).hostname;
+  if (/^(localhost|127\.|10\.|192\.168\.|169\.254\.|0\.|\[)/.test(host) || host.endsWith('.internal')) throw new Error('Ungültiger Link');
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 15000);
+  try {
+    const r = await fetch(url, { signal: ctl.signal, headers: { 'User-Agent': 'Spozli-Kalender/1.0', Accept: 'text/calendar, */*' } });
+    if (!r.ok) throw new Error(`Kalender antwortet mit ${r.status}`);
+    const text = await r.text();
+    if (text.length > 5_000_000) throw new Error('Kalender ist zu groß');
+    if (!text.includes('BEGIN:VCALENDAR')) throw new Error('Kein Kalender unter diesem Link');
+    return text;
+  } finally { clearTimeout(t); }
+}
+
+// ---------- Spozli als Kalender-Abo (für Apple Kalender) ----------
+const icsEsc = (s: string) => String(s || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/([,;])/g, '\\$1');
+const icsDate = (d: string) => d.replace(/-/g, '');
+const icsDT = (d: string, hm: string) => icsDate(d) + 'T' + hm.replace(':', '') + '00';
+function fold(line: string) {
+  const out: string[] = [];
+  let cur = '';
+  for (const ch of line) { if (new TextEncoder().encode(cur + ch).length > 73) { out.push(cur); cur = ' ' + ch; } else cur += ch; }
+  out.push(cur);
+  return out.join('\r\n');
+}
+const RRULE: Record<string, string> = { daily: 'FREQ=DAILY', weekly: 'FREQ=WEEKLY', biweekly: 'FREQ=WEEKLY;INTERVAL=2', monthly: 'FREQ=MONTHLY', yearly: 'FREQ=YEARLY' };
+async function feed(token: string) {
+  if (!token || token.length < 16) return null;
+  const [pr] = await sql`select owner_id, household_id from public.items where kind = 'prefs' and not deleted and data->'prefs'->>'feedToken' = ${token} limit 1`;
+  if (!pr) return null;
+  const [m] = await sql`select name from public.members where user_id = ${pr.owner_id} and household_id = ${pr.household_id}`;
+  const rows = await sql`select id, data, updated_at from public.items where household_id = ${pr.household_id} and kind = 'event' and not deleted and (visibility = 'shared' or owner_id = ${pr.owner_id})`;
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Spozli//DE', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    `X-WR-CALNAME:Spozli${m?.name ? ' (' + icsEsc(m.name) + ')' : ''}`, 'X-PUBLISHED-TTL:PT30M', 'REFRESH-INTERVAL;VALUE=DURATION:PT30M'];
+  for (const r of rows as any[]) {
+    const ev = r.data || {};
+    if (!ev.date) continue;
+    const title = ev.kind === 'bday' ? `🎂 ${ev.title}` : ev.kind === 'anniv' ? `💍 ${ev.title}` : (ev.cat === 'filmen' ? '🎬 ' : '') + ev.title;
+    L.push('BEGIN:VEVENT', `UID:${r.id}@spozli`, `DTSTAMP:${stamp}`, fold(`SUMMARY:${icsEsc(title)}`));
+    const endDate = ev.endDate && ev.endDate > ev.date ? ev.endDate : ev.date;
+    if (ev.allday || !ev.time) {
+      L.push(`DTSTART;VALUE=DATE:${icsDate(ev.date)}`, `DTEND;VALUE=DATE:${icsDate(addDays(endDate, 1))}`);
+    } else {
+      let end = ev.end || ev.time;
+      let ed = endDate;
+      if (ed === ev.date && toMin(end) <= toMin(ev.time)) end = fromMin(Math.min(toMin(ev.time) + 60, 23 * 60 + 59));
+      L.push(`DTSTART:${icsDT(ev.date, ev.time)}`, `DTEND:${icsDT(ed, end)}`);
+    }
+    if (RRULE[ev.repeat]) L.push(`RRULE:${RRULE[ev.repeat]}`);
+    const cat = ev.cat === 'gemeinsam' ? 'Beide' : ev.cat === 'filmen' ? 'Filmen' : 'Privat';
+    L.push(`CATEGORIES:${cat}`);
+    if (ev.note) L.push(fold(`DESCRIPTION:${icsEsc(ev.note)}`));
+    for (const rm of (ev.rems || []) as number[]) L.push('BEGIN:VALARM', 'ACTION:DISPLAY', fold(`DESCRIPTION:${icsEsc(title)}`), `TRIGGER:-PT${rm}M`, 'END:VALARM');
+    L.push('END:VEVENT');
+  }
+  L.push('END:VCALENDAR');
+  return L.join('\r\n') + '\r\n';
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   try {
@@ -340,6 +423,16 @@ Deno.serve(async (req) => {
     if (req.method === 'POST') body = await req.json().catch(() => ({}));
     const action = url.searchParams.get('action') || body.action;
     if (action === 'vapid') return json({ key: (await vapid()).pub });
+    if (action === 'feed') {
+      const ics = await feed(url.searchParams.get('t') || '');
+      if (!ics) return new Response('Nicht gefunden', { status: 404, headers: CORS });
+      return new Response(ics, { headers: { ...CORS, 'Content-Type': 'text/calendar; charset=utf-8', 'Cache-Control': 'no-cache' } });
+    }
+    if (action === 'ics') {
+      if (!(await userFromReq(req))) return json({ error: 'Bitte neu anmelden' }, 401);
+      try { return new Response(await fetchIcs(body.url), { headers: { ...CORS, 'Content-Type': 'text/calendar; charset=utf-8' } }); }
+      catch (e) { return json({ error: String((e as Error)?.message || e) }, 400); }
+    }
     if (action === 'test') {
       const [s] = await sql`select endpoint, p256dh, auth, user_id from public.push_subs where endpoint = ${String(body.endpoint || '')}`;
       if (!s) return json({ ok: false, error: 'unknown' }, 404);
