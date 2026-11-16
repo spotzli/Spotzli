@@ -33,17 +33,21 @@ export async function enablePush(supabase) {
   const perm = await Notification.requestPermission();
   if (perm !== 'granted') throw new Error(perm === 'denied' ? 'denied' : 'dismissed');
   const reg = await navigator.serviceWorker.ready;
-  const r = await fetch(`${FN_URL}?action=vapid`, { headers: { apikey: SUPABASE_KEY } });
-  if (!r.ok) throw new Error('server');
-  const { key } = await r.json();
-  if (!key) throw new Error('server');
+  let r;
+  try { r = await fetch(`${FN_URL}?action=vapid`, { headers: { apikey: SUPABASE_KEY } }); } catch (e) { throw new Error('Server nicht erreichbar'); }
+  if (!r.ok) { const t = await r.text().catch(() => ''); throw new Error(`Server ${r.status}${t ? ': ' + t.slice(0, 80) : ''}`); }
+  const { key } = await r.json().catch(() => ({}));
+  if (!key) throw new Error('Server liefert keinen Schlüssel');
   const appKey = b64u(key);
   let sub = await reg.pushManager.getSubscription();
   if (sub && !same(sub.options?.applicationServerKey, appKey)) { await sub.unsubscribe(); sub = null; }
-  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: appKey });
+  if (!sub) {
+    try { sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: appKey }); }
+    catch (e) { throw new Error('Gerät: ' + (e && e.message || e)); }
+  }
   const j = sub.toJSON();
   const { error } = await supabase.rpc('register_push', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent.slice(0, 200) });
-  if (error) throw error;
+  if (error) throw new Error('Datenbank: ' + (error.message || error.code || 'Fehler'));
   return sub;
 }
 

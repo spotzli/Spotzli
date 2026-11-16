@@ -412,7 +412,7 @@ function pushCardHtml(){const st=pushInfo.state;
 function drawPushCard(){const el=document.getElementById('pushcard');if(el)el.innerHTML=pushCardHtml()}
 async function refreshPush(){try{pushInfo.state=await pushState()}catch(e){pushInfo.state='unsupported'}drawPushCard()}
 async function pushAction(id){
-  if(id==='push-on'){pushInfo.busy=true;drawPushCard();try{await enablePush(ctx.supabase);if(!S.pushOn){S.pushOn=true;save()}toast('Push ist aktiv');}catch(e){toast(e.message==='denied'?'Mitteilungen wurden abgelehnt':e.message==='dismissed'?'Nicht aktiviert':'Aktivieren fehlgeschlagen. Ist die Server-Funktion eingerichtet?')}pushInfo.busy=false;await refreshPush();render()}
+  if(id==='push-on'){pushInfo.busy=true;drawPushCard();try{await enablePush(ctx.supabase);if(!S.pushOn){S.pushOn=true;save()}toast('Push ist aktiv');}catch(e){toast(e.message==='denied'?'Mitteilungen wurden abgelehnt':e.message==='dismissed'?'Nicht aktiviert':'Aktivieren fehlgeschlagen ('+e.message+')')}pushInfo.busy=false;await refreshPush();render()}
   if(id==='push-off'){try{await disablePush(ctx.supabase)}catch(e){}await refreshPush();toast('Push auf diesem Gerät aus')}
   if(id==='push-test'){pushInfo.busy=true;drawPushCard();try{await testPush();toast('Test gesendet, gleich sollte eine Mitteilung kommen')}catch(e){toast('Test fehlgeschlagen. Ist die Server-Funktion eingerichtet?')}pushInfo.busy=false;drawPushCard()}
 }
@@ -743,7 +743,7 @@ function toast(msg,undo){
   clearTimeout(toastT);let t=document.getElementById('toast');if(t)t.remove();
   t=document.createElement('div');t.className='toast';t.id='toast';t.innerHTML=`<span>${esc(msg)}</span>${undo?'<button>Rückgängig</button>':''}`;
   document.body.appendChild(t);if(undo)t.querySelector('button').onclick=()=>{undo();t.remove()};
-  toastT=setTimeout(()=>t.remove(),3500);
+  toastT=setTimeout(()=>t.remove(),Math.max(3500,msg.length*70));
 }
 let pushT;
 function pushRaw(title,body){
