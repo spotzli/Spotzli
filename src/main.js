@@ -238,7 +238,8 @@ async function boot() {
     else if (ctx.members.length !== cached?.members?.length) location.reload();
   } catch (e) {
     console.warn(e);
-    if (!running) screen(`<h1 class="authtitle">Verbindung fehlgeschlagen</h1><p class="authsub">${esc(errText(e))}</p><button class="btn primary" onclick="location.reload()">Nochmal versuchen</button>`);
+    if (!running) screen(`<h1 class="authtitle">Verbindung fehlgeschlagen</h1><p class="authsub">${esc(errText(e))}</p><button class="btn primary" onclick="location.reload()">Nochmal versuchen</button><button class="authswitch small" id="out">Abmelden</button>`);
+    const out = document.getElementById('out'); if (out) out.onclick = signOut;
   }
 }
 

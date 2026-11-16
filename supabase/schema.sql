@@ -1,13 +1,11 @@
 -- Spozli: Datenbank-Schema für Supabase
 -- Einmal komplett im Supabase SQL Editor ausführen (Run).
 
-create extension if not exists pgcrypto;
-
 -- Haushalte -------------------------------------------------------------
 create table if not exists public.households (
   id uuid primary key default gen_random_uuid(),
   name text not null default 'Unser Zuhause',
-  invite_code text not null unique default upper(substr(encode(gen_random_bytes(6), 'hex'), 1, 6)),
+  invite_code text not null unique default upper(substr(md5(random()::text || clock_timestamp()::text), 1, 6)),
   created_by uuid not null references auth.users(id) on delete cascade,
   created_at timestamptz not null default now()
 );
