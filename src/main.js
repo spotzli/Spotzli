@@ -12,6 +12,9 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 const root = document.getElementById('app');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const CTX_KEY = 'spozli-ctx';
+const APP_URL = location.origin + import.meta.env.BASE_URL;
+const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const fromConfirmLink = /type=(signup|email)/.test(location.hash + location.search);
 
 function screen(html) {
   document.body.classList.add('auth');
@@ -55,7 +58,7 @@ function showLogin(mode = 'login') {
   if (forgot) forgot.onclick = async () => {
     const email = document.getElementById('email').value.trim();
     if (!email) { setMsg('Gib oben deine E-Mail ein, dann schicken wir dir einen Link.', true); return; }
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: APP_URL });
     setMsg(error ? errText(error) : 'Wir haben dir eine E-Mail zum Zurücksetzen geschickt.', !!error);
   };
   document.getElementById('authform').onsubmit = async (e) => {
@@ -66,7 +69,7 @@ function showLogin(mode = 'login') {
     busy(btn, true, 'Einen Moment …');
     try {
       if (signup) {
-        const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname } });
+        const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: APP_URL } });
         if (error) throw error;
         if (!data.session) {
           busy(btn, false, 'Konto erstellen');
@@ -81,8 +84,28 @@ function showLogin(mode = 'login') {
     } catch (err) {
       busy(btn, false, signup ? 'Konto erstellen' : 'Anmelden');
       setMsg(errText(err), true);
+      if (/not confirmed/i.test(err?.message || '')) showResend(email);
     }
   };
+}
+
+function showResend(email) {
+  if (document.getElementById('resend')) return;
+  const b = document.createElement('button');
+  b.className = 'authswitch'; b.id = 'resend'; b.textContent = 'Bestätigungs-Mail nochmal senden';
+  b.onclick = async () => {
+    const { error } = await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: APP_URL } });
+    setMsg(error ? errText(error) : 'Neue Mail ist unterwegs. Öffne den Link darin und melde dich dann hier an.', !!error);
+  };
+  document.getElementById('authform').after(b);
+}
+
+function showConfirmed() {
+  screen(`<h1 class="authtitle">E-Mail bestätigt!</h1>
+  <p class="authsub">Dein Konto ist bereit. Öffne Spozli jetzt über das Icon auf deinem Home-Bildschirm und melde dich dort mit E-Mail und Passwort an.</p>
+  <p class="authsub">Noch nicht installiert? Tippe in Safari auf das Teilen-Symbol und dann auf „Zum Home-Bildschirm“.</p>
+  <button class="authswitch" id="here">Lieber hier im Browser weitermachen</button>`);
+  document.getElementById('here').onclick = () => boot();
 }
 
 function showNewPassword() {
@@ -223,7 +246,12 @@ supabase.auth.onAuthStateChange((event) => {
   if (event === 'PASSWORD_RECOVERY') showNewPassword();
 });
 
-boot();
+// Nach dem Tippen auf den Bestätigungs-Link öffnet iOS Safari, nicht die installierte App.
+if (fromConfirmLink && !standalone) {
+  supabase.auth.getSession().then(() => { history.replaceState(null, '', APP_URL); showConfirmed(); });
+} else {
+  boot();
+}
 
 // Service Worker (Offline-Modus) registrieren
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
