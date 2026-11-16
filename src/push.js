@@ -45,9 +45,7 @@ export async function enablePush(supabase) {
     try { sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: appKey }); }
     catch (e) { throw new Error('Gerät: ' + (e && e.message || e)); }
   }
-  const j = sub.toJSON();
-  const { error } = await supabase.rpc('register_push', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent.slice(0, 200) });
-  if (error) throw new Error('Datenbank: ' + (error.message || error.code || 'Fehler'));
+  await register(supabase, sub);
   return sub;
 }
 
@@ -58,11 +56,38 @@ export async function disablePush(supabase) {
   await sub.unsubscribe();
 }
 
-export async function testPush() {
-  const sub = await currentSub();
-  if (!sub) throw new Error('off');
-  const r = await fetch(FN_URL, { method: 'POST', headers: HEADERS, body: JSON.stringify({ action: 'test', endpoint: sub.endpoint }) });
+async function register(supabase, sub) {
+  const j = sub.toJSON();
+  const { error } = await supabase.rpc('register_push', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent.slice(0, 200) });
+  if (error) throw new Error('Datenbank: ' + (error.message || error.code || 'Fehler'));
+}
+
+// Beim Start still nachmelden, falls der Server das Gerät vergessen hat
+export async function ensureRegistered(supabase) {
+  try { const sub = await currentSub(); if (sub && Notification.permission === 'granted') await register(supabase, sub); } catch (e) {}
+}
+
+async function sendTest(sub) {
+  let r;
+  try { r = await fetch(FN_URL, { method: 'POST', headers: HEADERS, body: JSON.stringify({ action: 'test', endpoint: sub.endpoint }) }); }
+  catch (e) { return { err: 'Server nicht erreichbar' }; }
   const j = await r.json().catch(() => ({}));
-  if (!r.ok || !j.ok) throw new Error(j.error || 'server');
+  return { r, j };
+}
+
+// Test mit Selbstreparatur: Gerät neu melden bzw. neu abonnieren, wenn nötig
+export async function testPush(supabase) {
+  let sub = await currentSub();
+  if (!sub) throw new Error('Push ist auf diesem Gerät aus');
+  let { r, j, err } = await sendTest(sub);
+  if (err) throw new Error(err);
+  if (r.status === 404 && j.error === 'unknown') { await register(supabase, sub); ({ r, j, err } = await sendTest(sub)); if (err) throw new Error(err); }
+  if (j.status === 404 || j.status === 410 || j.status === 403 || (r.status === 404 && j.error === 'unknown')) {
+    try { await sub.unsubscribe(); } catch (e) {}
+    sub = await enablePush(supabase);
+    ({ r, j, err } = await sendTest(sub)); if (err) throw new Error(err);
+  }
+  if (r.status === 401) throw new Error('Server 401: In der Funktion „Verify JWT“ ausschalten');
+  if (!r.ok || !j.ok) throw new Error(j.status ? 'Apple meldet ' + j.status : 'Server ' + r.status + (j.error ? ': ' + String(j.error).slice(0, 80) : (j.msg || j.message ? ': ' + String(j.msg || j.message).slice(0, 80) : '')));
   return j;
 }

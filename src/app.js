@@ -1,7 +1,7 @@
 import { lumoSvg } from './figure.js';
 import { SAYINGS } from './sayings.js';
 import { getMedia, setMedia, resizeImage } from './media.js';
-import { pushState, enablePush, disablePush, testPush, isIOS, FN_URL } from './push.js';
+import { pushState, enablePush, disablePush, testPush, ensureRegistered, isIOS, FN_URL } from './push.js';
 import { parseICS, expandICS, toSpozliEvents } from './ics.js';
 import { SUPABASE_KEY } from './config.js';
 
@@ -593,7 +593,7 @@ async function refreshPush(){try{pushInfo.state=await pushState()}catch(e){pushI
 async function pushAction(id){
   if(id==='push-on'){pushInfo.busy=true;drawPushCard();try{await enablePush(ctx.supabase);if(!S.pushOn){S.pushOn=true;save()}toast('Push ist aktiv');}catch(e){toast(e.message==='denied'?'Mitteilungen wurden abgelehnt':e.message==='dismissed'?'Nicht aktiviert':'Aktivieren fehlgeschlagen ('+e.message+')')}pushInfo.busy=false;await refreshPush();render()}
   if(id==='push-off'){try{await disablePush(ctx.supabase)}catch(e){}await refreshPush();toast('Push auf diesem Gerät aus')}
-  if(id==='push-test'){pushInfo.busy=true;drawPushCard();try{await testPush();toast('Test gesendet, gleich sollte eine Mitteilung kommen')}catch(e){toast('Test fehlgeschlagen. Ist die Server-Funktion eingerichtet?')}pushInfo.busy=false;drawPushCard()}
+  if(id==='push-test'){pushInfo.busy=true;drawPushCard();try{await testPush(ctx.supabase);toast('Test gesendet. Kommt nichts an, prüfe den Fokus-Modus und Einstellungen › Mitteilungen › Spozli.')}catch(e){toast('Test fehlgeschlagen ('+e.message+')')}pushInfo.busy=false;drawPushCard()}
 }
 function renderRem(){setTimeout(refreshPush,0);
   const rems=upcomingReminders(14);
@@ -1055,6 +1055,7 @@ app.addEventListener('pointerdown',dashDown);app.addEventListener('pointermove',
 WIDE.addEventListener('change',()=>{render();scrollGrid()});
 render();scrollGrid();
 setTimeout(()=>refreshSubs(false),1500);
+setTimeout(()=>ensureRegistered(ctx.supabase),2500);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshSubs(false)});
 window.addEventListener('online',()=>refreshSubs(false));
 let pendingRender=false;
