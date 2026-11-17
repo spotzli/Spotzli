@@ -591,6 +591,15 @@ async function pushAction(id){
   if(id==='push-off'){try{await disablePush(ctx.supabase)}catch(e){}await refreshPush();toast('Push auf diesem Gerät aus')}
   if(id==='push-test'){pushInfo.busy=true;drawPushCard();try{await testPush(ctx.supabase);toast('Test gesendet. Kommt nichts an, prüfe den Fokus-Modus und Einstellungen › Mitteilungen › Spotzi.')}catch(e){toast('Test fehlgeschlagen ('+e.message+')')}pushInfo.busy=false;drawPushCard()}
 }
+function notifyRows(){const F=FEAT(),N=S.prefs.notify||{},W=S.prefs.water||{},o=esc(USERS[S.user==='sevi'?'sie':'sevi'].name);
+  return [F.cal&&['cal','📅','Kalender','Erinnerungen vor deinen Terminen',N.cal!==false],
+    F.cal&&['newShared','💞','Neue Termine von '+o,'Wenn '+o+' einen gemeinsamen Termin einträgt',N.newShared!==false],
+    F.todo&&['todo','✅','To-dos','Erinnerungen zu deinen To-dos',N.todo!==false],
+    F.house&&['house','🧹','Haushalt','Wenn eine Aufgabe fällig ist',N.house!==false],
+    F.habits&&['habits','🌱','Habits','Erinnerung an deine Habits',N.habits!==false],
+    F.shop&&['shop','🛒','Einkaufsliste','Wenn '+o+' die Liste ändert',N.shop!==false&&S.prefs.shopPush!==false],
+    ['water','💧','Wasser trinken','Einstellungen weiter unten',!!W.on],
+    ['morning','☀️','Morgen-Übersicht','Einstellungen weiter unten',S.prefs.morning!==false]].filter(Boolean)}
 function renderRem(){setTimeout(refreshPush,0);
   const rems=upcomingReminders(14);
   const groups={};rems.forEach(r=>{const k=iso(r.t);(groups[k]=groups[k]||[]).push(r)});
@@ -602,14 +611,14 @@ function renderRem(){setTimeout(refreshPush,0);
    <div class="card" id="pushcard">${pushCardHtml()}</div>
    <div class="card" style="margin-top:10px"><div class="setting"><div><b>Erinnerungen senden</b><div class="hint" style="margin:0">Hauptschalter für alle Push-Nachrichten an ${esc(USERS[S.user].name)}</div></div><button class="switch" role="switch" id="pushsw" aria-checked="${S.pushOn}" aria-label="Erinnerungen senden"></button></div>
    <div class="setting"><label for="defrem"><b>Standard für neue Termine</b></label><select class="inp" id="defrem">${remOpts}</select></div></div>
+   <div class="section-title">Benachrichtigungen pro Bereich</div>
+   <div class="card">${notifyRows().map(([k,ic,l,h,on])=>`<div class="setting"><div><b>${ic} ${l}</b>${h?`<div class="hint" style="margin:0">${h}</div>`:''}</div><button class="switch" role="switch" data-notify="${k}" aria-checked="${on}" aria-label="${l}"></button></div>`).join('')}</div>
    <div class="section-title">Wasser trinken</div>
    <div class="card"><div class="setting"><div><b>Spotzi erinnert ans Trinken</b><div class="hint" style="margin:0">Mit Gläser-Zähler auf der Startseite</div></div><button class="switch" role="switch" data-wpref="on" aria-checked="${!!W.on}" aria-label="Wasser-Erinnerung"></button></div>
     <div ${W.on?'':'hidden'}><div class="setting"><label for="w-every">Wie oft</label><select class="inp" id="w-every" style="max-width:55%">${[[30,'Alle 30 Min'],[60,'Jede Stunde'],[90,'Alle 1,5 Std'],[120,'Alle 2 Std'],[180,'Alle 3 Std']].map(([v,l])=>`<option value="${v}"${W.every===v?' selected':''}>${l}</option>`).join('')}</select></div>
     <div class="setting"><span>Zeitfenster</span><span class="row" style="max-width:60%"><input type="time" class="inp" id="w-from" value="${W.from}" aria-label="Von"><input type="time" class="inp" id="w-to" value="${W.to}" aria-label="Bis"></span></div>
     <div class="setting"><label for="w-goal">Tagesziel</label><select class="inp" id="w-goal" style="max-width:55%">${[4,5,6,7,8,9,10,12].map(v=>`<option value="${v}"${W.goal===v?' selected':''}>${v} Gläser</option>`).join('')}</select></div>
     <p class="hint" style="margin:6px 2px 2px">Hast du dein Tagesziel erreicht, ist Spotzi für heute still.</p></div></div>
-   ${FEAT().shop?`<div class="section-title">Einkaufsliste</div>
-   <div class="card"><div class="setting"><div><b>Änderungen von ${esc(USERS[S.user==='sevi'?'sie':'sevi'].name)}</b><div class="hint" style="margin:0">Eine Nachricht, 1 Minute nach der letzten Änderung</div></div>${sw('shopPush',P.shopPush!==false,'Einkaufsliste-Änderungen')}</div></div>`:''}
    <div class="section-title">Morgen-Übersicht</div>
    <div class="card"><div class="setting"><div><b>„Was steht heute an?“</b><div class="hint" style="margin:0">Jeden Morgen eine Push mit allen Terminen des Tages</div></div>${sw('morning',P.morning,'Morgen-Übersicht')}</div>
     <div class="setting"><label for="mtime"><b>Uhrzeit</b></label><input type="time" class="inp" id="mtime" value="${P.mtime}" style="max-width:130px"></div>
@@ -1082,6 +1091,11 @@ app.addEventListener('click',e=>{
   if(t.dataset.pref){const k=t.dataset.pref;if(k.startsWith('cat:'))S.prefs.cats[k.slice(4)]=!S.prefs.cats[k.slice(4)];else S.prefs[k]=!S.prefs[k];save();render();return}
   if(t.id==='mtest'){morningPush();return}
   if(t.id==='push-on'||t.id==='push-off'||t.id==='push-test'){pushAction(t.id);return}
+  if(t.dataset.notify){const k=t.dataset.notify;
+    if(k==='water'){S.prefs.water={...WATER_DEF,...S.prefs.water,on:!(S.prefs.water||{}).on}}
+    else if(k==='morning'){S.prefs.morning=S.prefs.morning===false}
+    else{const N={...(S.prefs.notify||{})};const cur=k==='shop'?(N.shop!==false&&S.prefs.shopPush!==false):N[k]!==false;N[k]=!cur;if(k==='shop')S.prefs.shopPush=!cur;S.prefs.notify=N}
+    save();render();return}
   if(t.dataset.wpref){S.prefs.water={...WATER_DEF,...S.prefs.water,on:!(S.prefs.water||{}).on};save();render();if(S.prefs.water.on&&pushInfo.state!=='on')toast('Tipp: Aktiviere oben Push, damit Spotzi dich erinnern kann');return}
   if(t.id==='pushsw'){S.pushOn=!S.pushOn;save();render();toast(S.pushOn?'Push-Nachrichten an':'Push-Nachrichten aus');return}
   if(t.dataset.user){S.user=t.dataset.user;save();render();return}

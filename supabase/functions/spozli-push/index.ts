@@ -191,6 +191,7 @@ async function tick() {
     if (pr.pushOn === false) continue;
     const tz = P.tz || 'Europe/Zurich';
     const F = P.features || {};
+    const N = P.notify || {}; // Benachrichtigungen pro Bereich
     const loc = partsIn(now, tz), today = loc.date;
     const hh = (items as any[]).filter((i) => i.household_id === m.household_id);
     const cand: { key: string; msg: any }[] = [];
@@ -206,7 +207,7 @@ async function tick() {
     };
     // Termine, Geburtstage, Jahrestage
     for (const it of hh) {
-      if (F.cal === false) break;
+      if (F.cal === false || N.cal === false) break;
       if (it.kind !== 'event' || !(it.visibility === 'shared' || it.owner_id === m.user_id)) continue;
       const ev = it.data || {};
       if (!ev.date || (P.cats && P.cats[ev.cat] === false)) continue;
@@ -232,7 +233,7 @@ async function tick() {
     }
     // To-dos
     for (const it of hh) {
-      if (F.todo === false) break;
+      if (F.todo === false || N.todo === false) break;
       if (it.kind !== 'todo' || it.owner_id !== m.user_id) continue;
       const t = it.data || {};
       if (t.done) continue;
@@ -245,7 +246,7 @@ async function tick() {
     }
     // Haushalt
     for (const it of hh) {
-      if (F.house === false) break;
+      if (F.house === false || N.house === false) break;
       if (it.kind !== 'chore') continue;
       const c = it.data || {};
       if (!c.remind || !c.due) continue;
@@ -255,7 +256,7 @@ async function tick() {
     }
     // Habits
     for (const it of hh) {
-      if (F.habits === false) break;
+      if (F.habits === false || N.habits === false) break;
       if (it.kind !== 'habit' || it.owner_id !== m.user_id) continue;
       const h = it.data || {};
       if (!h.remind || !(h.rdays || [0, 1, 2, 3, 4, 5, 6]).includes(loc.wd)) continue;
@@ -349,7 +350,7 @@ async function shopDigest(now: number, members: any[], subsBy: Record<string, Su
       const msg = { title: `🛒 ${actor?.name || 'Dein Schatz'} hat die Einkaufsliste geändert`, body: parts.join(' · '), tag: 'shop', url: APP_URL };
       for (const m of others) {
         const pr = prefsBy[m.user_id] || {}, P = pr.prefs || {};
-        if (pr.pushOn === false || P.shopPush === false || (P.features || {}).shop === false) continue;
+        if (pr.pushOn === false || P.shopPush === false || (P.notify || {}).shop === false || (P.features || {}).shop === false) continue;
         for (const s of subsBy[m.user_id] || []) { try { await sendPush(s, msg); sent++; } catch (e) { console.warn('send', e); } }
       }
     }
@@ -371,7 +372,7 @@ async function newItem(id: string) {
     if (m.user_id === it.owner_id) continue;
     const [p] = await sql`select data from public.items where id = ${m.user_id + ':prefs'}`;
     const pr = p?.data || {};
-    if (pr.pushOn === false || pr.prefs?.cats?.gemeinsam === false) continue;
+    if (pr.pushOn === false || pr.prefs?.cats?.gemeinsam === false || pr.prefs?.notify?.newShared === false) continue;
     const fresh = await sql`insert into public.push_log(key) values (${`${m.user_id}:new:${id}`}) on conflict do nothing returning key`;
     if (!fresh.length) continue;
     const subs = await sql`select endpoint, p256dh, auth, user_id from public.push_subs where user_id = ${m.user_id}`;
