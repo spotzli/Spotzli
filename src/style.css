@@ -459,3 +459,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-conten
 @keyframes swl{from{transform:translateX(36px);opacity:.4}}
 @keyframes swr{from{transform:translateX(-36px);opacity:.4}}
 .swl{animation:swl .22s ease-out}.swr{animation:swr .22s ease-out}
+/* Habits: kurz tippen = erledigt, lange drücken = bearbeiten */
+.habit .tbody{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+.hhead{display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px;font-family:var(--f-display);font-weight:700;font-size:17px}
+.hadd{width:34px;height:34px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);font-size:22px;line-height:1;display:grid;place-items:center;box-shadow:var(--shadow-s);cursor:pointer}

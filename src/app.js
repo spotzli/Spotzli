@@ -193,15 +193,16 @@ function waterCard(){const w={...WATER_DEF,...S.prefs.water};const n=glassesToda
 function habitRow(h){const done=h.freq==='weekly'?hWeekCount(h)>=(h.target||1):hDoneOn(h,TODAY);const today=hDoneOn(h,TODAY);const st=hStreak(h);
   const meta=h.freq==='weekly'?`${h.target}× pro Woche · ${hWeekCount(h)}/${h.target} diese Woche`:'Täglich';
   return `<div class="todo habit${done?' hdone':''}"><button class="tchk hchk${today?' on':''}" data-hdone="${h.id}" aria-label="${today?'Heute nicht erledigt':'Heute erledigt'}">${today?'✓':esc(h.icon||'⭐')}</button>
-   <button class="tbody" data-habit="${h.id}"><div class="t">${esc(h.title)}</div><div class="meta"><span>${meta}</span>${st?`<span>🔥 ${st} ${h.freq==='weekly'?(st===1?'Woche':'Wochen'):(st===1?'Tag':'Tage')}</span>`:''}${h.remind?`<span>🔔 ${h.rtime}</span>`:''}</div>
+   <button class="tbody" data-hdone="${h.id}" data-hedit="${h.id}" aria-label="${esc(h.title)}: kurz tippen = erledigt, lange drücken = bearbeiten"><div class="t">${esc(h.title)}</div><div class="meta"><span>${meta}</span>${st?`<span>🔥 ${st} ${h.freq==='weekly'?(st===1?'Woche':'Wochen'):(st===1?'Tag':'Tage')}</span>`:''}${h.remind?`<span>🔔 ${h.rtime}</span>`:''}</div>
    ${h.freq==='weekly'?`<div class="bar"><i style="width:${Math.round(hProgress(h)*100)}%"></i></div>`:''}</button></div>`}
 function renderHabits(){
   S.habits=S.habits||[];
   return `${habitHero()}
-  <div class="todos" style="margin-top:12px">${S.habits.map(habitRow).join('')||'<div class="empty">Noch keine Habits. Wähle unten eine Vorlage oder tippe auf +.</div>'}</div>
+  <div class="hhead"><span>Meine Habits</span><button class="hadd" data-hnew="1" aria-label="Neuer Habit">+</button></div>
+  <div class="todos">${S.habits.map(habitRow).join('')||'<div class="empty">Noch keine Habits. Wähle unten eine Vorlage oder tippe auf +.</div>'}</div>
   <div class="section-title">Vorlagen<span>antippen zum Hinzufügen</span></div>
   <div class="tpls">${HABIT_TPL.map(([n,i],k)=>`<button data-htpl="${k}">${i} ${n}</button>`).join('')}</div>
-  <p class="hint">Tippe auf das Symbol, um einen Habit für heute abzuhaken. Deine Habits sieht nur du.</p>`}
+  <p class="hint">Kurz tippen = heute erledigt. Lange drücken = bearbeiten oder löschen. Deine Habits sieht nur du.</p>`}
 function toggleHabit(id){const h=S.habits.find(x=>x.id===id);if(!h)return;h.log=h.log||[];const before=habitPct();
   if(h.log.includes(TODAY))h.log=h.log.filter(d=>d!==TODAY);else{h.log.push(TODAY);h.log=h.log.filter(d=>dayNum(TODAY)-dayNum(d)<200)}
   save();render();const p=habitPct();if(p===100&&before!==100)toast('100 %! Spotzi feiert mit dir 🎉');
@@ -1011,10 +1012,12 @@ function buy(id,el){
 }
 
 /* ---------- Events ---------- */
-let lpT=null,lpFired=false;
-app.addEventListener('pointerdown',e=>{const t=e.target.closest('[data-item]');if(!t)return;lpFired=false;lpT=setTimeout(()=>{lpFired=true;openSpec(t.dataset.item)},480)});
+let lpT=null,lpFired=false,lpXY=null;
+const lpAct=t=>t.dataset.item?openSpec(t.dataset.item):openHabit(S.habits.find(x=>x.id===t.dataset.hedit));
+app.addEventListener('pointerdown',e=>{const t=e.target.closest('[data-item],[data-hedit]');if(!t||dashEdit)return;lpFired=false;lpXY=[e.clientX,e.clientY];clearTimeout(lpT);lpT=setTimeout(()=>{lpFired=true;if(navigator.vibrate)navigator.vibrate(15);lpAct(t)},480)});
+app.addEventListener('pointermove',e=>{if(lpXY&&Math.hypot(e.clientX-lpXY[0],e.clientY-lpXY[1])>10){clearTimeout(lpT);lpXY=null}});
 ['pointerup','pointerleave','pointercancel'].forEach(n=>app.addEventListener(n,()=>clearTimeout(lpT)));
-app.addEventListener('contextmenu',e=>{const t=e.target.closest('[data-item]');if(t){e.preventDefault();clearTimeout(lpT);if(!lpFired){lpFired=true;openSpec(t.dataset.item)}}});
+app.addEventListener('contextmenu',e=>{const t=e.target.closest('[data-item],[data-hedit]');if(t){e.preventDefault();clearTimeout(lpT);if(!lpFired){lpFired=true;lpAct(t)}}});
 let lastDayTap={};
 // Kalender wischen: links = weiter, rechts = zurück
 let calSw=null;
@@ -1039,7 +1042,8 @@ app.addEventListener('click',e=>{
   if(t.dataset.tpl){openChore(null,CHORE_TPL[+t.dataset.tpl]);return}
   if(t.dataset.hfilter){houseFilter=t.dataset.hfilter;render();return}
   if(t.dataset.tdone){toggleTodo(t.dataset.tdone);return}
-  if(t.dataset.hdone){toggleHabit(t.dataset.hdone);return}
+  if(t.dataset.hdone){if(lpFired){lpFired=false;return}toggleHabit(t.dataset.hdone);return}
+  if(t.dataset.hnew){openHabit(null);return}
   if(t.dataset.habit){openHabit(S.habits.find(x=>x.id===t.dataset.habit));return}
   if(t.dataset.htpl){openHabit(null,HABIT_TPL[+t.dataset.htpl]);return}
   if(t.dataset.tmode){S.todoMode=t.dataset.tmode;save();render();return}
