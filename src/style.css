@@ -448,3 +448,5 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-conten
 .gchip.mspan{position:relative;z-index:1;width:calc(var(--span)*100% + (var(--span) - 1)*5px)}
 .gchip.mspan.cl{border-top-left-radius:0;border-bottom-left-radius:0}
 .gchip.mspan.cr{border-top-right-radius:0;border-bottom-right-radius:0}
+.authsub.small{font-size:13px;margin-top:4px}
+.inp.otp{text-align:center;font-size:24px;letter-spacing:.3em;font-variant-numeric:tabular-nums}

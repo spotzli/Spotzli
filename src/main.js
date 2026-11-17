@@ -42,6 +42,8 @@ const errText = (e) => {
   if (/Email not confirmed/i.test(m)) return 'Bitte bestätige zuerst deine E-Mail über den Link, den wir dir geschickt haben.';
   if (/User already registered/i.test(m)) return 'Für diese E-Mail gibt es schon ein Konto. Melde dich einfach an.';
   if (/Password should be at least/i.test(m)) return 'Das Passwort braucht mindestens 6 Zeichen.';
+  if (/expired|invalid.*(token|otp)|otp.*invalid|token.*invalid/i.test(m)) return 'Der Code stimmt nicht oder ist abgelaufen. Lass dir einen neuen schicken.';
+  if (/rate limit|security purposes|only request this after/i.test(m)) return 'Bitte warte kurz (etwa 1 Minute) und versuch es dann nochmal.';
   if (/Failed to fetch|NetworkError/i.test(m)) return 'Keine Verbindung. Prüfe dein Internet und versuch es nochmal.';
   return m;
 };
@@ -77,11 +79,7 @@ function showLogin(mode = 'login') {
       if (signup) {
         const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: APP_URL } });
         if (error) throw error;
-        if (!data.session) {
-          busy(btn, false, 'Konto erstellen');
-          setMsg('Fast geschafft: Wir haben dir eine E-Mail geschickt. Tipp auf den Link darin und melde dich dann hier an.');
-          return;
-        }
+        if (!data.session) { showVerify(email, password); return; }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -89,26 +87,61 @@ function showLogin(mode = 'login') {
       await boot();
     } catch (err) {
       busy(btn, false, signup ? 'Konto erstellen' : 'Anmelden');
+      if (/not confirmed/i.test(err?.message || '')) { await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: APP_URL } }).catch(() => {}); showVerify(email, password, true); return; }
       setMsg(errText(err), true);
-      if (/not confirmed/i.test(err?.message || '')) showResend(email);
     }
   };
 }
 
-function showResend(email) {
-  if (document.getElementById('resend')) return;
-  const b = document.createElement('button');
-  b.className = 'authswitch'; b.id = 'resend'; b.textContent = 'Bestätigungs-Mail nochmal senden';
-  b.onclick = async () => {
-    const { error } = await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: APP_URL } });
-    setMsg(error ? errText(error) : 'Neue Mail ist unterwegs. Öffne den Link darin und melde dich dann hier an.', !!error);
+// ---------- E-Mail bestätigen: Code eingeben ODER Link antippen ----------
+let verifyCleanup = null;
+function showVerify(email, password, resent) {
+  screen(`<h1 class="authtitle">E-Mail bestätigen</h1>
+  <p class="authsub">${resent ? 'Dein Konto ist noch nicht bestätigt. Wir haben dir eine neue E-Mail geschickt' : 'Wir haben dir eine E-Mail geschickt'} an <b>${esc(email)}</b>.</p>
+  <form id="otpform" class="card authcard">
+    <div class="field"><label for="otp">Code aus der E-Mail</label><input class="inp otp" id="otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10" placeholder="123456"></div>
+    <button class="btn primary" id="go" type="submit">Bestätigen</button>
+    <p class="authmsg" id="msg" role="status"></p>
+  </form>
+  <p class="authsub small">Oder tippe in der E-Mail auf den Link. Danach einfach hierher zurückkommen, du wirst automatisch angemeldet.</p>
+  <button class="authswitch" id="linkdone">Ich habe den Link angetippt</button>
+  <button class="authswitch small" id="resend">Neue E-Mail schicken</button>
+  <button class="authswitch small" id="back">Zurück zur Anmeldung</button>`);
+  const done = async () => { if (verifyCleanup) verifyCleanup(); await boot(); };
+  // Nach dem Link: mit den gerade eingegebenen Daten anmelden (Passwort bleibt nur im Speicher)
+  const tryLogin = async (manual) => {
+    if (!password) { if (manual) showLogin(); return false; }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error) { await done(); return true; }
+    if (manual) setMsg(/not confirmed/i.test(error.message) ? 'Noch nicht bestätigt. Tippe zuerst auf den Link in der E-Mail oder gib den Code ein.' : errText(error), true);
+    return false;
   };
-  document.getElementById('authform').after(b);
+  const onVis = () => { if (!document.hidden) tryLogin(false); };
+  document.addEventListener('visibilitychange', onVis);
+  const timer = setInterval(() => { if (!document.hidden) tryLogin(false); }, 6000);
+  verifyCleanup = () => { document.removeEventListener('visibilitychange', onVis); clearInterval(timer); verifyCleanup = null; };
+  setTimeout(() => document.getElementById('otp')?.focus(), 50);
+  document.getElementById('otpform').onsubmit = async (e) => {
+    e.preventDefault();
+    const token = document.getElementById('otp').value.replace(/\D/g, '');
+    if (token.length < 6) { setMsg('Bitte gib den ganzen Code aus der E-Mail ein.', true); return; }
+    const btn = document.getElementById('go'); busy(btn, true, 'Einen Moment …');
+    let { error } = await supabase.auth.verifyOtp({ email, token, type: 'signup' });
+    if (error) ({ error } = await supabase.auth.verifyOtp({ email, token, type: 'email' }));
+    if (error) { busy(btn, false, 'Bestätigen'); setMsg(errText(error), true); return; }
+    await done();
+  };
+  document.getElementById('linkdone').onclick = () => tryLogin(true);
+  document.getElementById('resend').onclick = async () => {
+    const { error } = await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: APP_URL } });
+    setMsg(error ? errText(error) : 'Neue E-Mail ist unterwegs. Schau auch im Spam-Ordner nach.', !!error);
+  };
+  document.getElementById('back').onclick = () => { if (verifyCleanup) verifyCleanup(); showLogin(); };
 }
 
 function showConfirmed() {
   screen(`<h1 class="authtitle">E-Mail bestätigt!</h1>
-  <p class="authsub">Dein Konto ist bereit. Öffne Spotzi jetzt über das Icon auf deinem Home-Bildschirm und melde dich dort mit E-Mail und Passwort an.</p>
+  <p class="authsub">Dein Konto ist bereit. Geh jetzt zurück in die Spotzi-App auf deinem Home-Bildschirm, dort wirst du automatisch angemeldet. Falls nicht, melde dich mit E-Mail und Passwort an.</p>
   <p class="authsub">Noch nicht installiert? Tippe in Safari auf das Teilen-Symbol und dann auf „Zum Home-Bildschirm“.</p>
   <button class="authswitch" id="here">Lieber hier im Browser weitermachen</button>`);
   document.getElementById('here').onclick = () => boot();
