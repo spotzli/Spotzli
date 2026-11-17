@@ -314,7 +314,48 @@ async function tick() {
       for (const s of mySubs) { try { await sendPush(s, c.msg); sent++; } catch (e) { console.warn('send', e); } }
     }
   }
+  sent += await shopDigest(now, members as any[], subsBy, prefsBy);
   if (new Date(now).getUTCMinutes() % 30 === 0) await sql`delete from public.push_log where sent_at < now() - interval '4 days'`;
+  return sent;
+}
+
+// Einkaufsliste: 1 Minute nach der letzten Änderung eine gesammelte Nachricht an die andere Person
+const nameList = (a: string[]) => { const u = [...new Set(a)]; return u.length > 6 ? u.slice(0, 6).join(', ') + ` und ${u.length - 6} weitere` : u.join(', '); };
+async function shopDigest(now: number, members: any[], subsBy: Record<string, Sub[]>, prefsBy: Record<string, any>) {
+  let groups: any[] = [];
+  try { groups = await sql`select household_id, user_id from public.shop_changes group by 1, 2 having max(at) < now() - interval '60 seconds'`; }
+  catch (_) { return 0; } // Tabelle noch nicht angelegt
+  let sent = 0;
+  for (const g of groups) {
+    const rows = await sql`select id, action, name from public.shop_changes where household_id = ${g.household_id} and user_id = ${g.user_id} order by id`;
+    const actor = members.find((m) => m.user_id === g.user_id);
+    const others = members.filter((m) => m.household_id === g.household_id && m.user_id !== g.user_id);
+    // Nachtruhe: warten, bis bei allen Empfängern 7 Uhr ist
+    const sleeping = others.some((m) => { const P = (prefsBy[m.user_id] || {}).prefs || {}; if (P.quiet === false) return false; const hm = partsIn(now, P.tz || 'Europe/Zurich').hm; return hm >= '22:00' || hm < '07:00'; });
+    if (sleeping) continue;
+    // Netto-Änderung je Artikel (hinzugefügt und gleich wieder abgehakt = nichts)
+    const net = new Map<string, string>();
+    for (const r of rows as any[]) {
+      const k = r.name.toLowerCase().replace(/ \(.*\)$/, '');
+      const prev = net.get(k);
+      if (r.action === 'done' && prev && prev.startsWith('add')) { net.delete(k); continue; }
+      if (r.action === 'edit' && prev && prev.startsWith('add')) { net.set(k, 'add|' + r.name); continue; }
+      net.set(k, r.action + '|' + r.name);
+    }
+    const by: Record<string, string[]> = { add: [], done: [], edit: [] };
+    for (const v of net.values()) { const [a, n] = v.split('|'); by[a].push(n); }
+    const parts = [by.add.length && 'hinzugefügt: ' + nameList(by.add), by.done.length && 'abgehakt: ' + nameList(by.done), by.edit.length && 'geändert: ' + nameList(by.edit)].filter(Boolean);
+    if (parts.length) {
+      const msg = { title: `🛒 ${actor?.name || 'Dein Schatz'} hat die Einkaufsliste geändert`, body: parts.join(' · '), tag: 'shop', url: APP_URL };
+      for (const m of others) {
+        const pr = prefsBy[m.user_id] || {}, P = pr.prefs || {};
+        if (pr.pushOn === false || P.shopPush === false || (P.features || {}).shop === false) continue;
+        for (const s of subsBy[m.user_id] || []) { try { await sendPush(s, msg); sent++; } catch (e) { console.warn('send', e); } }
+      }
+    }
+    const ids = (rows as any[]).map((r) => r.id);
+    await sql`delete from public.shop_changes where id = any(${ids}::bigint[])`;
+  }
   return sent;
 }
 

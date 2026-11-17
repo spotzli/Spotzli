@@ -306,7 +306,7 @@ const remLabel=m=>{const p=REM_PRESETS.find(x=>x[0]===m);if(p)return p[1];if(m%1
 
 const FEAT_DEF={cal:true,todo:true,habits:true,house:true,shop:true,countdown:true};
 const FEAT=()=>({...FEAT_DEF,...(S.prefs.features||{})});
-const DEFAULT_PREFS={morning:true,mtime:'07:30',mshop:true,mweekend:true,cats:{filmen:true,sevi_privat:true,gemeinsam:true,sie_privat:true},quiet:true,lumo:true,mquote:true,weekStart:1,defView:'month',kw:true,dayStart:7,defDur:60,colors:{}};
+const DEFAULT_PREFS={shopPush:true,morning:true,mtime:'07:30',mshop:true,mweekend:true,cats:{filmen:true,sevi_privat:true,gemeinsam:true,sie_privat:true},quiet:true,lumo:true,mquote:true,weekStart:1,defView:'month',kw:true,dayStart:7,defDur:60,colors:{}};
 const S={user:ctx.me,tab:'home',sel:TODAY,month:TODAY.slice(0,7),filter:'alle',defRem:60,pushOn:true,events:[],todos:[],chores:[],choreLog:[],list:[],habits:[],avatars:{},calsubs:[],countdowns:[],recent:[],notes:{},prefs:{...DEFAULT_PREFS},todoMode:'todo'};
 try{const ui=JSON.parse(localStorage.getItem('spozli-ui')||'{}');if(ui.tab)S.tab=ui.tab;if(ui.view)S.view=ui.view;if(['alle','privat','gemeinsam'].includes(ui.filter))S.filter=ui.filter;if(ui.todoMode)S.todoMode=ui.todoMode}catch(e){}
 function load(){ctx.store.applyToState(S);S.prefs={...DEFAULT_PREFS,...S.prefs,cats:{...DEFAULT_PREFS.cats,...(S.prefs.cats||{})},colors:{...(S.prefs.colors||{})}}}
@@ -608,6 +608,8 @@ function renderRem(){setTimeout(refreshPush,0);
     <div class="setting"><span>Zeitfenster</span><span class="row" style="max-width:60%"><input type="time" class="inp" id="w-from" value="${W.from}" aria-label="Von"><input type="time" class="inp" id="w-to" value="${W.to}" aria-label="Bis"></span></div>
     <div class="setting"><label for="w-goal">Tagesziel</label><select class="inp" id="w-goal" style="max-width:55%">${[4,5,6,7,8,9,10,12].map(v=>`<option value="${v}"${W.goal===v?' selected':''}>${v} Gläser</option>`).join('')}</select></div>
     <p class="hint" style="margin:6px 2px 2px">Hast du dein Tagesziel erreicht, ist Spotzi für heute still.</p></div></div>
+   ${FEAT().shop?`<div class="section-title">Einkaufsliste</div>
+   <div class="card"><div class="setting"><div><b>Änderungen von ${esc(USERS[S.user==='sevi'?'sie':'sevi'].name)}</b><div class="hint" style="margin:0">Eine Nachricht, 1 Minute nach der letzten Änderung</div></div>${sw('shopPush',P.shopPush!==false,'Einkaufsliste-Änderungen')}</div></div>`:''}
    <div class="section-title">Morgen-Übersicht</div>
    <div class="card"><div class="setting"><div><b>„Was steht heute an?“</b><div class="hint" style="margin:0">Jeden Morgen eine Push mit allen Terminen des Tages</div></div>${sw('morning',P.morning,'Morgen-Übersicht')}</div>
     <div class="setting"><label for="mtime"><b>Uhrzeit</b></label><input type="time" class="inp" id="mtime" value="${P.mtime}" style="max-width:130px"></div>
