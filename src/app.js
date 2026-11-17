@@ -1016,6 +1016,16 @@ app.addEventListener('pointerdown',e=>{const t=e.target.closest('[data-item]');i
 ['pointerup','pointerleave','pointercancel'].forEach(n=>app.addEventListener(n,()=>clearTimeout(lpT)));
 app.addEventListener('contextmenu',e=>{const t=e.target.closest('[data-item]');if(t){e.preventDefault();clearTimeout(lpT);if(!lpFired){lpFired=true;openSpec(t.dataset.item)}}});
 let lastDayTap={};
+// Kalender wischen: links = weiter, rechts = zurück
+let calSw=null;
+app.addEventListener('touchstart',e=>{if(e.touches.length!==1||layer.innerHTML){calSw=null;return}const area=e.target.closest('.month,.gwrap,.aday,.agenda');const inCal=S.tab==='cal'||e.target.closest('.dtile[data-k="cal"]');if(!area||!inCal||dashEdit){calSw=null;return}const t=e.touches[0];calSw={x:t.clientX,y:t.clientY,t:Date.now()}},{passive:true});
+app.addEventListener('touchend',e=>{const sw=calSw;calSw=null;if(!sw)return;const t=e.changedTouches[0];const dx=t.clientX-sw.x,dy=t.clientY-sw.y;
+  if(Math.abs(dx)<60||Math.abs(dy)>Math.abs(dx)*0.6||Date.now()-sw.t>700)return;
+  const dir=dx<0?1:-1;const V=S.view;
+  if(V==='month'){const d=fromIso(S.month+'-01');d.setMonth(d.getMonth()+dir);S.month=iso(d).slice(0,7)}
+  else{const n=V==='day'?1:V==='3day'?3:7;S.sel=addDays(S.sel,dir*n);S.month=S.sel.slice(0,7)}
+  lastDayTap={};save();render();if(V==='day'||V==='3day')scrollGrid();
+  const el=app.querySelector('.month,.gwrap');if(el){el.classList.remove('swl','swr');void el.offsetWidth;el.classList.add(dir>0?'swl':'swr')}},{passive:true});
 app.addEventListener('click',e=>{
   const mc=e.target.closest('.mch[data-ev]');if(mc){openDetail(mc.dataset.ev,mc.dataset.d);return}
   const t=e.target.closest('button');if(!t)return;

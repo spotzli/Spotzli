@@ -455,3 +455,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-conten
 .otpbox{margin-top:4px;text-align:center}
 .otpbox summary{color:var(--muted);font-size:13px;cursor:pointer;padding:6px}
 .otpbox .authcard{text-align:left;margin-top:6px}
+/* Kalender wischen */
+@keyframes swl{from{transform:translateX(36px);opacity:.4}}
+@keyframes swr{from{transform:translateX(-36px);opacity:.4}}
+.swl{animation:swl .22s ease-out}.swr{animation:swr .22s ease-out}
