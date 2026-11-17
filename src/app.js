@@ -230,11 +230,7 @@ function openHabit(h,tpl){
   });
 }
 let todoFilter='alle';
-function renderTodo(){
-  const modeSeg=`<div class="seg vseg" role="group" aria-label="Ansicht" style="margin-bottom:12px"><button data-tmode="todo" aria-pressed="${S.todoMode!=='habits'}">To-dos</button><button data-tmode="habits" aria-pressed="${S.todoMode==='habits'}">Habits</button></div>`;
-  const both=FEAT().todo&&FEAT().habits;
-  if(S.todoMode==='habits')return (both?modeSeg:'')+renderHabits();
-  return (both?modeSeg:'')+renderTodoList()}
+function renderTodo(){return renderTodoList()}
 function renderTodoList(){
   S.todos=S.todos||[];
   let list=S.todos.filter(todoVisible);
@@ -354,22 +350,21 @@ const app=document.getElementById('app'),layer=document.getElementById('layer'),
 function render(){
   applyColors();applyDesign();
   syncExtCats();const F=FEAT();
-  const tabOn={home:true,cal:F.cal,todo:F.todo||F.habits,house:F.house,shop:F.shop};
+  const tabOn={home:true,cal:F.cal,todo:F.todo,habits:F.habits,house:F.house,shop:F.shop};
   if(S.tab!=='rem'&&!tabOn[S.tab])S.tab='home';
-  if(S.tab==='todo'){if(!F.todo)S.todoMode='habits';if(!F.habits)S.todoMode='todo'}
-  ['home','cal','todo','house','shop'].forEach(t=>{const b=document.getElementById('tab-'+t);b.setAttribute('aria-current',S.tab===t?'page':'false');b.hidden=!tabOn[t]});
-  {const tb=document.getElementById('tab-todo');const lbl=!F.todo&&F.habits?'Habits':'To-dos';if(tb.lastChild&&tb.lastChild.nodeType===3&&tb.lastChild.textContent!==lbl)tb.lastChild.textContent=lbl}
-  fab.hidden=!(S.tab==='cal'||(S.tab==='home'&&F.cal)||S.tab==='todo'||S.tab==='house');
+  if(S.tab==='todo'&&S.todoMode==='habits'){S.todoMode='todo';if(F.habits)S.tab='habits'}
+  ['home','cal','todo','habits','house','shop'].forEach(t=>{const b=document.getElementById('tab-'+t);if(!b)return;b.setAttribute('aria-current',S.tab===t?'page':'false');b.hidden=!tabOn[t]});
+  fab.hidden=!(S.tab==='cal'||(S.tab==='home'&&F.cal)||S.tab==='todo'||S.tab==='habits'||S.tab==='house');
   const me=USERS[S.user].name;
   const hr=new Date().getHours();const greet=hr<11?'Guten Morgen':hr<18?'Hallo':'Guten Abend';
-  const titles={home:[fmtDay(TODAY),greet+', '+me],cal:['Unser Kalender','Kalender'],shop:['Unsere Liste','Einkauf'],todo:S.todoMode==='habits'?['Jeden Tag ein bisschen','Habits']:['Zu erledigen','To-dos'],house:['Wiederkehrend','Haushalt'],rem:['Für '+me,'Erinnerungen']};
+  const titles={home:[fmtDay(TODAY),greet+', '+me],cal:['Unser Kalender','Kalender'],shop:['Unsere Liste','Einkauf'],todo:['Zu erledigen','To-dos'],habits:['Jeden Tag ein bisschen','Habits'],house:['Wiederkehrend','Haushalt'],rem:['Für '+me,'Erinnerungen']};
   const [sm,big]=titles[S.tab];
   const wide=WIDE.matches,dash=wide&&S.tab==='home';document.body.classList.toggle('wide',wide);document.body.classList.toggle('dash',dash);
   {const hb=document.getElementById('tab-home');const lbl=wide?'Übersicht':'Start';if(hb.lastChild&&hb.lastChild.nodeType===3&&hb.lastChild.textContent!==lbl)hb.lastChild.textContent=lbl}
   if(!dash)dashEdit=false;
   let h=`<header class="top"><div class="hello"><small>${esc(sm)}</small><h1>${esc(big)}</h1></div>
   <div class="toprow">${dash?`<button class="btn dedit" id="dash-edit" aria-pressed="${dashEdit}">${dashEdit?'Fertig':'✎ Anpassen'}</button>`:''}${avatarHtml(S.user,'avatar','id="who-btn" aria-label="Profil von '+esc(me)+'"')}<button class="gear" id="settings-btn" aria-label="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div></header>`;
-  h+=dash?renderDash():{home:renderHome,cal:renderCal,todo:renderTodo,house:renderHouse,shop:renderShop,rem:renderRem}[S.tab]();
+  h+=dash?renderDash():{home:renderHome,cal:renderCal,todo:renderTodo,habits:renderHabits,house:renderHouse,shop:renderShop,rem:renderRem}[S.tab]();
   h+=`<div class="syncline" id="syncline">${syncText()}</div>`;
   app.innerHTML=h;
 }
@@ -1020,6 +1015,7 @@ let lpT=null,lpFired=false;
 app.addEventListener('pointerdown',e=>{const t=e.target.closest('[data-item]');if(!t)return;lpFired=false;lpT=setTimeout(()=>{lpFired=true;openSpec(t.dataset.item)},480)});
 ['pointerup','pointerleave','pointercancel'].forEach(n=>app.addEventListener(n,()=>clearTimeout(lpT)));
 app.addEventListener('contextmenu',e=>{const t=e.target.closest('[data-item]');if(t){e.preventDefault();clearTimeout(lpT);if(!lpFired){lpFired=true;openSpec(t.dataset.item)}}});
+let lastDayTap={};
 app.addEventListener('click',e=>{
   const mc=e.target.closest('.mch[data-ev]');if(mc){openDetail(mc.dataset.ev,mc.dataset.d);return}
   const t=e.target.closest('button');if(!t)return;
@@ -1047,7 +1043,7 @@ app.addEventListener('click',e=>{
   if(t.dataset.gnav){S.sel=addDays(S.sel,+t.dataset.gnav);S.month=S.sel.slice(0,7);save();render();scrollGrid();return}
   if(t.dataset.slot){const[d,tm]=t.dataset.slot.split('|');openForm(null,{date:d,time:tm});return}
   if(t.dataset.cd){if(t.dataset.cd==='new')openCountdown(null);else openCountdown(S.countdowns.find(x=>x.id===t.dataset.cd));return}
-  if(t.dataset.go==='habits'){S.tab='todo';S.todoMode='habits';save();render();window.scrollTo(0,0);return}
+  
   if(t.dataset.go){S.tab=t.dataset.go;save();render();window.scrollTo(0,0);return}
   if(t.dataset.quick==='ev'){openForm(null);return}
   if(t.dataset.quick==='item'){S.tab='shop';save();render();document.getElementById('q').focus();return}
@@ -1057,7 +1053,7 @@ app.addEventListener('click',e=>{
   if(t.dataset.wpref){S.prefs.water={...WATER_DEF,...S.prefs.water,on:!(S.prefs.water||{}).on};save();render();if(S.prefs.water.on&&pushInfo.state!=='on')toast('Tipp: Aktiviere oben Push, damit Spotzi dich erinnern kann');return}
   if(t.id==='pushsw'){S.pushOn=!S.pushOn;save();render();toast(S.pushOn?'Push-Nachrichten an':'Push-Nachrichten aus');return}
   if(t.dataset.user){S.user=t.dataset.user;save();render();return}
-  if(t.dataset.day){S.sel=t.dataset.day;if(t.dataset.day.slice(0,7)!==S.month)S.month=t.dataset.day.slice(0,7);save();render();return}
+  if(t.dataset.day){const now=Date.now();if(lastDayTap.d===t.dataset.day&&now-lastDayTap.t<450&&FEAT().cal){lastDayTap={};openForm(null,{date:t.dataset.day});return}lastDayTap={d:t.dataset.day,t:now};S.sel=t.dataset.day;if(t.dataset.day.slice(0,7)!==S.month)S.month=t.dataset.day.slice(0,7);save();render();return}
   if(t.dataset.mon){const d=fromIso(S.month+'-01');d.setMonth(d.getMonth()+ +t.dataset.mon);S.month=iso(d).slice(0,7);render();return}
   if(t.dataset.filter){S.filter=t.dataset.filter;save();render();return}
   if(t.dataset.ev){openDetail(t.dataset.ev,t.dataset.d);return}
@@ -1072,7 +1068,7 @@ app.addEventListener('submit',e=>{if(e.target.id==='tadd'){e.preventDefault();co
   if(e.target.id==='addform'){e.preventDefault();const v=document.getElementById('q').value;query='';addItem(v)}});
 app.addEventListener('input',e=>{if(e.target.id==='q'){query=e.target.value;const pos=e.target.selectionStart;render();const q=document.getElementById('q');q.focus();q.setSelectionRange(pos,pos)}});
 document.querySelectorAll('nav.tabs [data-tab]').forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;save();render();window.scrollTo(0,0)});
-fab.onclick=()=>S.tab==='todo'?(S.todoMode==='habits'?openHabit(null):openTodo(null)):S.tab==='house'?openChore(null):openForm(null);
+fab.onclick=()=>S.tab==='habits'?openHabit(null):S.tab==='todo'?openTodo(null):S.tab==='house'?openChore(null):openForm(null);
 function scrollGrid(){const g=document.getElementById('gbody');if(g)g.scrollTop=S.prefs.dayStart*48}
 document.querySelectorAll('nav.tabs [data-tab]').forEach(b=>b.addEventListener('click',scrollGrid));
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!layer.innerHTML&&dashEdit){dashEdit=false;render()}else closeSheet()}});
