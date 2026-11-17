@@ -98,13 +98,16 @@ let verifyCleanup = null;
 function showVerify(email, password, resent) {
   screen(`<h1 class="authtitle">E-Mail bestätigen</h1>
   <p class="authsub">${resent ? 'Dein Konto ist noch nicht bestätigt. Wir haben dir eine neue E-Mail geschickt' : 'Wir haben dir eine E-Mail geschickt'} an <b>${esc(email)}</b>.</p>
+  <div class="card authcard">
+    <p class="authsteps"><b>1.</b> Öffne die Mail „Confirm your email address“ (auch im Spam schauen).<br><b>2.</b> Tippe auf den Link darin.<br><b>3.</b> Komm zurück in diese App, du wirst automatisch angemeldet.</p>
+    <button class="btn primary" id="linkdone" type="button">Ich habe den Link angetippt</button>
+    <p class="authmsg" id="msg" role="status"></p>
+  </div>
+  <details class="otpbox"><summary>Ich habe einen Code bekommen</summary>
   <form id="otpform" class="card authcard">
     <div class="field"><label for="otp">Code aus der E-Mail</label><input class="inp otp" id="otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10" placeholder="123456"></div>
-    <button class="btn primary" id="go" type="submit">Bestätigen</button>
-    <p class="authmsg" id="msg" role="status"></p>
-  </form>
-  <p class="authsub small">Oder tippe in der E-Mail auf den Link. Danach einfach hierher zurückkommen, du wirst automatisch angemeldet.</p>
-  <button class="authswitch" id="linkdone">Ich habe den Link angetippt</button>
+    <button class="btn" id="go" type="submit">Code bestätigen</button>
+  </form></details>
   <button class="authswitch small" id="resend">Neue E-Mail schicken</button>
   <button class="authswitch small" id="back">Zurück zur Anmeldung</button>`);
   const done = async () => { if (verifyCleanup) verifyCleanup(); await boot(); };
@@ -113,14 +116,13 @@ function showVerify(email, password, resent) {
     if (!password) { if (manual) showLogin(); return false; }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (!error) { await done(); return true; }
-    if (manual) setMsg(/not confirmed/i.test(error.message) ? 'Noch nicht bestätigt. Tippe zuerst auf den Link in der E-Mail oder gib den Code ein.' : errText(error), true);
+    if (manual) setMsg(/not confirmed/i.test(error.message) ? 'Noch nicht bestätigt. Tippe zuerst auf den Link in der E-Mail.' : errText(error), true);
     return false;
   };
   const onVis = () => { if (!document.hidden) tryLogin(false); };
   document.addEventListener('visibilitychange', onVis);
   const timer = setInterval(() => { if (!document.hidden) tryLogin(false); }, 6000);
   verifyCleanup = () => { document.removeEventListener('visibilitychange', onVis); clearInterval(timer); verifyCleanup = null; };
-  setTimeout(() => document.getElementById('otp')?.focus(), 50);
   document.getElementById('otpform').onsubmit = async (e) => {
     e.preventDefault();
     const token = document.getElementById('otp').value.replace(/\D/g, '');
@@ -128,7 +130,7 @@ function showVerify(email, password, resent) {
     const btn = document.getElementById('go'); busy(btn, true, 'Einen Moment …');
     let { error } = await supabase.auth.verifyOtp({ email, token, type: 'signup' });
     if (error) ({ error } = await supabase.auth.verifyOtp({ email, token, type: 'email' }));
-    if (error) { busy(btn, false, 'Bestätigen'); setMsg(errText(error), true); return; }
+    if (error) { busy(btn, false, 'Code bestätigen'); setMsg(errText(error), true); return; }
     await done();
   };
   document.getElementById('linkdone').onclick = () => tryLogin(true);

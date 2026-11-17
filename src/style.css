@@ -450,3 +450,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-conten
 .gchip.mspan.cr{border-top-right-radius:0;border-bottom-right-radius:0}
 .authsub.small{font-size:13px;margin-top:4px}
 .inp.otp{text-align:center;font-size:24px;letter-spacing:.3em;font-variant-numeric:tabular-nums}
+.authsteps{margin:0 0 12px;line-height:1.7;font-size:15px}
+.otpbox{margin-top:4px;text-align:center}
+.otpbox summary{color:var(--muted);font-size:13px;cursor:pointer;padding:6px}
+.otpbox .authcard{text-align:left;margin-top:6px}
