@@ -1,3 +1,4 @@
+import { CATALOG, ICON, CATOF, iconFor } from './catalog.js';
 import { lumoSvg } from './figure.js';
 import { SAYINGS } from './sayings.js';
 import { getMedia, setMedia, resizeImage } from './media.js';
@@ -18,17 +19,6 @@ if(!ctx.filmen)PICK.sevi=PICK.sevi.filter(p=>p[0]!=='filmen');
 const REM_PRESETS=[[0,'Zum Termin'],[5,'5 Min vorher'],[15,'15 Min vorher'],[30,'30 Min vorher'],[60,'1 Std vorher'],[120,'2 Std vorher'],[1440,'1 Tag vorher'],[2880,'2 Tage vorher'],[10080,'1 Woche vorher']];
 const REPEAT={none:'Nie',daily:'Täglich',weekly:'Wöchentlich',biweekly:'Alle 2 Wochen',monthly:'Monatlich',yearly:'Jährlich'};
 const NAG={0:'Nein',1:'1× erneut nach 10 Min',2:'2× erneut, alle 10 Min',99:'Alle 15 Min bis zum Termin'};
-const CATALOG=[
- ['Obst & Gemüse',[['Äpfel','🍎'],['Bananen','🍌'],['Tomaten','🍅'],['Gurke','🥒'],['Zwiebeln','🧅'],['Knoblauch','🧄'],['Kartoffeln','🥔'],['Salat','🥬'],['Paprika','🫑'],['Karotten','🥕'],['Zitronen','🍋'],['Avocado','🥑']]],
- ['Milch & Eier',[['Milch','🥛'],['Eier','🥚'],['Butter','🧈'],['Käse','🧀'],['Joghurt','🥣']]],
- ['Brot & Gebäck',[['Brot','🍞'],['Brötchen','🥯'],['Croissants','🥐']]],
- ['Fleisch & Fisch',[['Hähnchen','🍗'],['Hackfleisch','🥩'],['Lachs','🐟'],['Würstchen','🌭']]],
- ['Vorrat',[['Nudeln','🍝'],['Reis','🍚'],['Mehl','🌾'],['Kaffee','☕'],['Tee','🫖'],['Olivenöl','🫒'],['Müsli','🥣']]],
- ['Getränke',[['Wasser','💧'],['Saft','🧃'],['Bier','🍺'],['Wein','🍷']]],
- ['Haushalt',[['Klopapier','🧻'],['Spülmittel','🧽'],['Müllbeutel','🗑️'],['Waschmittel','🧺']]],
- ['Drogerie',[['Zahnpasta','🪥'],['Duschgel','🧴'],['Shampoo','🧴']]]
-];
-const ICON={},CATOF={};CATALOG.forEach(([c,items])=>items.forEach(([n,i])=>{ICON[n]=i;CATOF[n]=c}));
 
 const pad=n=>String(n).padStart(2,'0');
 const iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
@@ -273,13 +263,45 @@ function openTodo(t){
   });
 }
 /* ---------- Design pro Person ---------- */
-const DESIGN_DEF={theme:'auto',accent:null,bg:'none',bgColor:'#DCE6FF',grad:'ozean',veil:30};
+const DESIGN_DEF={season:true,theme:'auto',accent:null,bg:'none',bgColor:'#DCE6FF',grad:'ozean',veil:30};
 const ACCENTS=['#4C5BD4','#2F7DEB','#0E9F9B','#2E9E4F','#E2861B','#DE4F8A','#8A5CF0','#D94848','#3B4256'];
 const GRADS={ozean:['Ozean','linear-gradient(160deg,#A1C4FD,#C2E9FB)'],lavendel:['Lavendel','linear-gradient(160deg,#E0C3FC,#8EC5FC)'],morgenrot:['Morgenrot','linear-gradient(160deg,#FFD3A5,#FD6585)'],pfirsich:['Pfirsich','linear-gradient(160deg,#FFECD2,#FCB69F)'],minze:['Minze','linear-gradient(160deg,#D4FC79,#96E6A1)'],sonne:['Sonnenuntergang','linear-gradient(160deg,#FA709A,#FEE140)'],wald:['Wald','linear-gradient(160deg,#134E5E,#71B280)'],nacht:['Nacht','linear-gradient(160deg,#141E30,#243B55)']};
 const media={photo:null,mood:[]};
 Promise.all([getMedia('photo'),getMedia('mood')]).then(([p,m])=>{media.photo=p;media.mood=m||[];lastBgSig='';applyDesign()});
 let lastBgSig='';
-function applyDesign(){
+/* ---------- Saison-Design ---------- */
+const SEASONS={
+  spring:{n:'Frühling',e:['🌸','🌷','🦋','🌼'],a:'#F48FB1',b:'#9CCC65',hi:'Frühling liegt in der Luft 🌸',fx:'float'},
+  summer:{n:'Sommer',e:['☀️','🌴','🍉','🌊'],a:'#FFB300',b:'#26C6DA',hi:'Sommerzeit ☀️',fx:'float'},
+  autumn:{n:'Herbst',e:['🍂','🍁','🍄','🌰'],a:'#E07B39',b:'#A1662F',hi:'Gemütlicher Herbst 🍂',fx:'fall'},
+  winter:{n:'Winter',e:['❄️','⛄','❄️','🧣'],a:'#64B5F6',b:'#B3E5FC',hi:'Winterzeit ❄️',fx:'fall'},
+  halloween:{n:'Halloween',e:['🎃','🦇','👻','🕸️'],a:'#FF7518',b:'#5E2B97',hi:'Happy Halloween 🎃',fx:'float'},
+  xmas:{n:'Weihnachten',e:['🎄','❄️','⭐','🎁'],a:'#C62828',b:'#2E7D32',hi:'Schöne Adventszeit 🎄',fx:'fall'},
+  xmasday:{n:'Weihnachten',e:['🎄','⭐','🎁','❄️'],a:'#C62828',b:'#2E7D32',hi:'Frohe Weihnachten 🎄',fx:'fall'},
+  newyear:{n:'Neujahr',e:['🎆','🎇','✨','🥂'],a:'#7C4DFF',b:'#FFD54F',hi:'Guten Rutsch & frohes neues Jahr 🎆',fx:'pop'},
+  valentine:{n:'Valentinstag',e:['❤️','💕','🌹','💖'],a:'#E91E63',b:'#F8BBD0',hi:'Schönen Valentinstag ❤️',fx:'float'},
+};
+function seasonKey(d=new Date()){const m=d.getMonth()+1,x=d.getDate();
+  if((m===12&&x===31)||(m===1&&x<=2))return 'newyear';
+  if(m===12&&x>=24&&x<=26)return 'xmasday';
+  if(m===12&&x<=23)return 'xmas';
+  if(m===10&&x>=24)return 'halloween';
+  if(m===2&&x===14)return 'valentine';
+  return m>=3&&m<=5?'spring':m>=6&&m<=8?'summer':m>=9&&m<=11?'autumn':'winter'}
+const seasonOn=()=>({...DESIGN_DEF,...S.prefs.design}).season!==false;
+let lastSeason='';
+function applySeason(){const on=seasonOn();const k=on?seasonKey():'';const root=document.documentElement;
+  document.body.dataset.season=k;
+  if(k){root.style.setProperty('--season-a',SEASONS[k].a);root.style.setProperty('--season-b',SEASONS[k].b)}
+  let el=document.getElementById('season');
+  if(k===lastSeason&&el)return;lastSeason=k;
+  if(el)el.remove();if(!k)return;
+  el=document.createElement('div');el.id='season';el.className='fx-'+SEASONS[k].fx;el.setAttribute('aria-hidden','true');
+  const E=SEASONS[k].e;let h='';for(let i=0;i<14;i++){const l=(i*73)%100,dl=((i*37)%90)/10,du=9+((i*53)%80)/10,sz=14+((i*29)%14);h+=`<span style="left:${l}%;animation-delay:-${dl}s;animation-duration:${du}s;font-size:${sz}px">${E[i%E.length]}</span>`}
+  el.innerHTML=h;document.body.prepend(el)}
+const seasonHero=()=>{if(!seasonOn())return '';const k=seasonKey(),z=SEASONS[k];return `<span class="sdeco" aria-hidden="true">${z.e[0]}</span>`};
+const seasonLab=()=>{if(!seasonOn())return 'Heute';const k=seasonKey();if(k==='newyear')return new Date().getMonth()===11?'Guten Rutsch 🎆':'Frohes neues Jahr 🎆';return SEASONS[k].hi};
+function applyDesign(){applySeason();
   const D={...DESIGN_DEF,...S.prefs.design};const root=document.documentElement;
   if(D.theme==='auto')delete root.dataset.theme;else root.dataset.theme=D.theme;
   const dark=D.theme==='dark'||(D.theme==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);
@@ -388,7 +410,7 @@ function renderHome(){
   const soon=[];{const ok=onceMulti();for(let i=0;i<=2&&soon.length<4;i++){const d=addDays(TODAY,i);eventsOn(d).forEach(ev=>{if(soon.length<4&&ok(ev,d))soon.push([ev,d])})}}
   const stats=[F.cal&&`<button class="stat" data-go="cal"><b>${todays.length}</b><span>Termine heute</span></button>`,F.shop&&`<button class="stat" data-go="shop"><b>${S.list.length}</b><span>Auf der Liste</span></button>`,F.cal&&`<button class="stat" data-go="rem"><b>${rems.filter(r=>r.t-Date.now()<864e5).length}</b><span>Erinnerungen 24 h</span></button>`,!F.cal&&F.todo&&`<button class="stat" data-go="todo"><b>${(S.todos||[]).filter(t=>!t.done&&t.due&&t.due<=TODAY).length}</b><span>To-dos heute</span></button>`,!F.cal&&F.habits&&habitPct()!==null&&`<button class="stat" data-go="habits"><b>${habitPct()}%</b><span>Habits</span></button>`].filter(Boolean);
   const quick=[F.cal&&'<button data-quick="ev">+ Termin</button>',F.shop&&'<button data-quick="item">+ Artikel</button>',F.countdown&&!F.shop&&'<button data-cd="new">+ Countdown</button>'].filter(Boolean);
-  return `<section class="hero"><div class="lab">Heute</div><div class="big">${big}</div>
+  return `<section class="hero">${seasonHero()}<div class="lab">${seasonLab()}</div><div class="big">${big}</div>
    ${stats.length?`<div class="stats">${stats.join('')}</div>`:''}</section>
   ${quick.length?`<div class="quick">${quick.join('')}</div>`:''}
   ${F.countdown?renderCountdowns():''}
@@ -401,7 +423,7 @@ function renderHome(){
   ${F.todo?(()=>{const l=(S.todos||[]).filter(t=>todoVisible(t)&&mine(t)&&!t.done&&t.due&&t.due<=TODAY);return `<div class="section-title">To-dos heute<button class="more" data-go="todo">Alle anzeigen</button></div><div class="card">${l.length?`<div class="todos">${l.slice(0,4).map(todoRow).join('')}</div>`:'<div class="empty" style="padding:8px">Heute nichts offen.</div>'}</div>`})():''}
   ${F.house?(()=>{const l=(S.chores||[]).filter(c=>choreMine(c)&&c.due<=TODAY);return l.length?`<div class="section-title">Haushalt heute<button class="more" data-go="house">Alle anzeigen</button></div><div class="todos">${l.slice(0,3).map(choreRow).join('')}</div>`:''})():''}
   ${F.shop?`<div class="section-title">Einkaufsliste<button class="more" data-go="shop">Liste öffnen</button></div>
-  <div class="card">${S.list.length?`<div class="mini-tiles">${S.list.slice(0,10).map(i=>`<span class="mini">${ICON[i.name]||'•'} ${esc(i.name)}${i.spec?' · '+esc(i.spec):''}</span>`).join('')}${S.list.length>10?`<span class="mini">+${S.list.length-10}</span>`:''}</div>`:'<div class="empty">Die Liste ist leer.</div>'}</div>`:''}
+  <div class="card">${S.list.length?`<div class="mini-tiles">${S.list.slice(0,10).map(i=>`<span class="mini">${iconFor(i.name)||'•'} ${esc(i.name)}${i.spec?' · '+esc(i.spec):''}</span>`).join('')}${S.list.length>10?`<span class="mini">+${S.list.length-10}</span>`:''}</div>`:'<div class="empty">Die Liste ist leer.</div>'}</div>`:''}
   ${F.cal?`<div class="section-title">Nächste Erinnerungen<button class="more" data-go="rem">Alle</button></div>
   <div class="rlist">${rems.slice(0,3).map(remRow).join('')||'<div class="empty">Keine Erinnerungen in den nächsten zwei Wochen.</div>'}</div>`:''}`;
 }
@@ -435,7 +457,7 @@ function dashToday(){const F=FEAT();
   const next=todays.find(ev=>ev.allday||ev.time>=nowHM);
   const big=!F.cal?'Schön, dass du da bist':next?`Als Nächstes: ${esc(next.title)}${next.allday?'':' um '+next.time}`:todays.length?'Für heute ist alles erledigt':'Heute steht nichts an';
   const st=[F.cal&&['cal',todays.length,'Termine heute'],F.todo&&['todo',(S.todos||[]).filter(t=>todoVisible(t)&&mine(t)&&!t.done&&t.due&&t.due<=TODAY).length,'To-dos heute'],F.shop&&['shop',S.list.length,'Auf der Liste'],F.habits&&habitPct()!==null&&['habits',habitPct()+'%','Habits'],F.house&&['house',(S.chores||[]).filter(c=>choreMine(c)&&c.due<=TODAY).length,'Haushalt heute']].filter(Boolean);
-  return `<div class="dtoday"><div class="big">${big}</div><div class="dstats">${st.map(([g,n,l])=>`<button class="stat" data-go="${g}"><b>${n}</b><span>${l}</span></button>`).join('')}</div></div>`}
+  return `<div class="dtoday">${seasonOn()?`<div class="slab">${seasonLab()}</div>`:''}<div class="big">${big}</div><div class="dstats">${st.map(([g,n,l])=>`<button class="stat" data-go="${g}"><b>${n}</b><span>${l}</span></button>`).join('')}</div></div>`}
 function renderDash(){const F=FEAT();const c=dashCfg();
   const avail=c.order.filter(k=>DASH_TILES[k].on(F));
   const shown=avail.filter(k=>!c.hide.includes(k)),hidden=avail.filter(k=>c.hide.includes(k));
@@ -751,7 +773,7 @@ function renderShop(){
   return h;
 }
 function tile(name,spec,cls,attr,by){
-  const ic=ICON[name]?`<span class="ic">${ICON[name]}</span>`:`<span class="ic letter">${esc(name.charAt(0).toUpperCase())}</span>`;
+  const ic=iconFor(name)?`<span class="ic">${iconFor(name)}</span>`:`<span class="ic letter">${esc(name.charAt(0).toUpperCase())}</span>`;
   const who=by&&by!==S.user?`<span class="sp">von ${USERS[by].name}</span>`:'';
   return `<button class="tile ${cls}" ${attr}>${ic}<span class="nm">${esc(name)}</span>${spec?`<span class="sp">${esc(spec)}</span>`:''}${!spec?who:''}</button>`;
 }
@@ -881,6 +903,7 @@ function openSettings(){
   const D={...DESIGN_DEF,...P.design};
   openSheet(`<h3>Einstellungen</h3>
   <div class="sgroup">Design für ${esc(USERS[S.user].name)}</div><div class="card">
+   <div class="setting"><div><b>Saison-Design</b><div class="hint" style="margin:0">Frühling, Sommer, Herbst, Winter, Halloween, Weihnachten, Neujahr. Aus = nur dein eigenes Design.</div></div><button class="switch" role="switch" data-dseason="1" aria-checked="${D.season!==false}" aria-label="Saison-Design"></button></div>
    <div class="setting col"><span>Erscheinungsbild</span><div class="seg vseg" style="margin:0">${[['auto','Automatisch'],['light','Hell'],['dark','Dunkel']].map(([k,l])=>`<button type="button" data-dtheme="${k}" aria-pressed="${D.theme===k}">${l}</button>`).join('')}</div></div>
    <div class="setting col"><div class="head"><span>Akzentfarbe</span>${D.accent?'<button class="more" data-dacc="">Standard</button>':''}</div><div class="swatches" style="justify-content:flex-start">${ACCENTS.map(c=>`<button class="sw" style="background:${c}" data-dacc="${c}" aria-label="Akzentfarbe ${c}" aria-pressed="${D.accent===c}"></button>`).join('')}<label class="sw swc" aria-label="Eigene Farbe" style="background:${D.accent&&!ACCENTS.includes(D.accent)?D.accent:'conic-gradient(red,yellow,lime,cyan,blue,magenta,red)'}"><input type="color" id="d-acc" value="${D.accent||'#4C5BD4'}"></label></div></div>
    <div class="setting col"><span>Hintergrund</span><div class="bgpick">
@@ -937,6 +960,7 @@ function openSettings(){
       save();render();toast('Gespeichert')});
     sh.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
       if(b.dataset.dtheme){setD({theme:b.dataset.dtheme});return}
+      if(b.dataset.dseason){const on=({...DESIGN_DEF,...P.design}).season===false;setD({season:on});b.setAttribute('aria-checked',on);return}
       if(b.dataset.feat){P.features={...FEAT_DEF,...P.features,[b.dataset.feat]:!FEAT()[b.dataset.feat]};upd();return}
       if(b.dataset.featw){P.water={...WATER_DEF,...P.water,on:!(P.water&&P.water.on)};upd();return}
       if(b.dataset.sub){openSub(S.calsubs.find(x=>x.id===b.dataset.sub));return}

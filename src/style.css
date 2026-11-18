@@ -463,3 +463,19 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-conten
 .habit .tbody{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
 .hhead{display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px;font-family:var(--f-display);font-weight:700;font-size:17px}
 .hadd{width:34px;height:34px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);font-size:22px;line-height:1;display:grid;place-items:center;box-shadow:var(--shadow-s);cursor:pointer}
+/* ---------- Saison-Design ---------- */
+#season{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.app{position:relative;z-index:1}
+#season span{position:absolute;top:-40px;opacity:.5;will-change:transform;animation:sfall linear infinite}
+#season.fx-float span{top:auto;bottom:-40px;animation-name:sfloat;opacity:.4}
+#season.fx-pop span{top:auto;animation-name:spop;animation-timing-function:ease-out;opacity:0}
+#season.fx-pop span:nth-child(odd){top:12%}#season.fx-pop span:nth-child(even){top:30%}#season.fx-pop span:nth-child(3n){top:55%}
+@keyframes sfall{0%{transform:translate(0,0) rotate(0)}50%{transform:translate(18px,55vh) rotate(160deg)}100%{transform:translate(-10px,110vh) rotate(320deg)}}
+@keyframes sfloat{0%{transform:translate(0,0)}50%{transform:translate(-14px,-55vh)}100%{transform:translate(10px,-110vh)}}
+@keyframes spop{0%{transform:scale(.2);opacity:0}15%{opacity:.85}45%{transform:scale(2.2);opacity:0}100%{opacity:0}}
+body[data-season]:not([data-season=""]) .hero{background:linear-gradient(135deg,var(--accent) 0%,color-mix(in srgb,var(--season-a) 55%,var(--accent)) 100%)}
+body[data-season]:not([data-season=""]) .hero::after{background:var(--season-b);opacity:.35}
+.hero .sdeco{position:absolute;right:14px;top:8px;font-size:46px;opacity:.9;z-index:1;transform:rotate(8deg);filter:drop-shadow(0 3px 6px rgba(0,0,0,.18))}
+.dtoday .slab{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--season-a);margin-bottom:4px}
+@media (prefers-reduced-motion:reduce){#season{display:none}}
+.hero:has(.sdeco) .lab,.hero:has(.sdeco) .big{padding-right:58px}
