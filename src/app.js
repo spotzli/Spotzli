@@ -595,18 +595,22 @@ function openTwint(c){const amt=(c/100).toFixed(2);const n=twintN();
     if(!n){toast(`${amt} ist kopiert. Richte einmal unter Einstellungen › Split deine TWINT-App ein, dann öffnet Spotzi sie direkt.`);return}
     toast(`${amt} kopiert. In TWINT: Senden, Empfänger wählen, Betrag einfügen.`);tryScheme(`twint-issuer${n}://`)})}
 let twSearch=0;// zuletzt getestete Variante bei der Suche
-function openSettle(id){const p=S.splits.find(x=>x.id===id);if(!p)return;const r=spCalc(id);const me=S.user;
-  const txt=!r.debtor?'Ihr seid quitt, niemand muss etwas überweisen.':r.debtor===me?`Du überweist ${esc(USERS[r.creditor].name)} <b>${chf(r.owe)}</b>.`:`${esc(USERS[r.debtor].name)} überweist dir <b>${chf(r.owe)}</b>.`;
+const SP_PAY=[['twint','TWINT'],['bar','Bar'],['bank','Überweisung'],['other','Anders']];
+function openSettle(id){const p=S.splits.find(x=>x.id===id);if(!p)return;const r=spCalc(id);const me=S.user;let how='twint';
+  const txt=!r.debtor?'Ihr seid quitt, niemand muss etwas zahlen.':r.debtor===me?`Du zahlst ${esc(USERS[r.creditor].name)} <b>${chf(r.owe)}</b>.`:`${esc(USERS[r.debtor].name)} zahlt dir <b>${chf(r.owe)}</b>.`;
   openSheet(`<div class="ask">${lumoSvg(r.debtor?'think':'happy')}<div><h3 style="margin:0">${esc(p.title)} abrechnen</h3><p class="hint" style="margin:2px 0 0">Total ${chf(r.total)}, pro Person ${chf(r.total/2)}</p></div></div>
   <div class="card spsettle"><div class="setting"><span>${esc(USERS.sevi.name)} hat bezahlt</span><b>${chf(r.paid.sevi)}</b></div><div class="setting"><span>${esc(USERS.sie.name)} hat bezahlt</span><b>${chf(r.paid.sie)}</b></div><div class="spres">${txt}</div></div>
-  ${r.debtor===me?'<div class="btns"><button class="btn twint" id="st-twint">Jetzt twinten</button></div><p class="hint" style="text-align:center;margin-top:4px">Spotzi kopiert den Betrag und öffnet TWINT. Dort Empfänger wählen und Betrag einfügen.</p>':''}
-  <p class="hint">Wenn alles bezahlt ist: „Abgerechnet“ löscht das Projekt mit allen Ausgaben, für euch beide.</p>
+  ${r.debtor?`<div class="field"><span class="lbl">Wie wird bezahlt?</span><div class="seg vseg" id="st-how">${SP_PAY.map(([k,l])=>`<button type="button" data-sthow="${k}" aria-pressed="${k===how}">${l}</button>`).join('')}</div></div>
+  <div id="st-twwrap"${how==='twint'&&r.debtor===me?'':' hidden'}><div class="btns"><button class="btn twint" id="st-twint">Jetzt twinten</button></div><p class="hint" style="text-align:center;margin-top:4px">Spotzi kopiert den Betrag und öffnet TWINT. Dort Empfänger wählen und Betrag einfügen.</p></div>`:''}
+  <p class="hint">Wenn alles bezahlt ist, bestätige mit „Abgerechnet“. Das Projekt wird dann mit allen Ausgaben gelöscht, für euch beide.</p>
   <div class="btns"><button class="btn" id="st-cancel">Noch nicht</button><button class="btn primary" id="st-done">Abgerechnet</button></div>`,sh=>{
     const $=q=>sh.querySelector(q);
     $('#st-cancel').onclick=closeSheet;
+    const hw=$('#st-how');if(hw)hw.onclick=e=>{const b=e.target.closest('[data-sthow]');if(!b)return;how=b.dataset.sthow;sh.querySelectorAll('[data-sthow]').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#st-twwrap').hidden=!(how==='twint'&&r.debtor===me)};
     const tw=$('#st-twint');if(tw)tw.onclick=()=>openTwint(r.owe);
     $('#st-done').onclick=e=>{const b=e.target;if(!b.dataset.sure){b.dataset.sure='1';b.textContent='Wirklich löschen?';return}
-      spRemove(id);closeSheet();render();window.scrollTo(0,0);toast(p.title+' abgerechnet und gelöscht 🎉')};
+      const lab=r.debtor?' ('+SP_PAY.find(x=>x[0]===how)[1].toLowerCase().replace('twint','TWINT')+')':'';
+      spRemove(id);closeSheet();render();window.scrollTo(0,0);toast(p.title+' abgerechnet'+lab+' und gelöscht 🎉')};
   })}
 /* ---------- Kalender-Abos (Google, iCloud, Outlook …) ---------- */
 const extCache={};// id -> {at,err,vevents,expanded,key}
