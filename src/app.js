@@ -582,13 +582,19 @@ function openSplitExp(x,proj){const isNew=!x;const f=x?JSON.parse(JSON.stringify
     if(isNew)setTimeout(()=>$('#sx-amt').focus(),50);
   })}
 // TWINT: Betrag kopieren und App öffnen. Vorausfüllen geht per Link nicht.
-const twintUrl=()=>{const n=+(S.prefs.twint||0);return n>0?`twint-issuer${n}://`:'twint-extended://'};
-function openTwint(c){const amt=(c/100).toFixed(2);
-  const go=()=>{let left=false;const onHide=()=>{if(document.hidden)left=true};document.addEventListener('visibilitychange',onHide);
-    setTimeout(()=>{document.removeEventListener('visibilitychange',onHide);if(!left&&!document.hidden)toast(`TWINT ging nicht auf. Der Betrag ${amt} ist kopiert, öffne TWINT selbst. Unter Einstellungen › Split kannst du die TWINT-App einstellen.`)},1800);
-    location.href=twintUrl()};
+// Jede Bank-App hat ihr eigenes Schema twint-issuerN://. Welches, findet die Suche in den Einstellungen.
+const twintN=()=>+(S.prefs.twint||0);
+// Öffnet ein Schema und merkt, ob die Seite danach in den Hintergrund geht (= App ist aufgegangen)
+function tryScheme(url,onOk){let done=false;const h=()=>{if(document.hidden&&!done){done=true;off();onOk&&onOk()}};
+  const off=()=>{document.removeEventListener('visibilitychange',h);window.removeEventListener('pagehide',h)};
+  document.addEventListener('visibilitychange',h);window.addEventListener('pagehide',h);setTimeout(off,15000);
+  location.href=url}
+function openTwint(c){const amt=(c/100).toFixed(2);const n=twintN();
   const cp=navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(amt):Promise.reject();
-  cp.then(()=>toast(`${amt} kopiert. In TWINT: Senden, Empfänger wählen, Betrag einfügen.`),()=>{}).finally(go)}
+  cp.then(()=>{},()=>{}).finally(()=>{
+    if(!n){toast(`${amt} ist kopiert. Richte einmal unter Einstellungen › Split deine TWINT-App ein, dann öffnet Spotzi sie direkt.`);return}
+    toast(`${amt} kopiert. In TWINT: Senden, Empfänger wählen, Betrag einfügen.`);tryScheme(`twint-issuer${n}://`)})}
+let twSearch=0;// zuletzt getestete Variante bei der Suche
 function openSettle(id){const p=S.splits.find(x=>x.id===id);if(!p)return;const r=spCalc(id);const me=S.user;
   const txt=!r.debtor?'Ihr seid quitt, niemand muss etwas überweisen.':r.debtor===me?`Du überweist ${esc(USERS[r.creditor].name)} <b>${chf(r.owe)}</b>.`:`${esc(USERS[r.debtor].name)} überweist dir <b>${chf(r.owe)}</b>.`;
   openSheet(`<div class="ask">${lumoSvg(r.debtor?'think':'happy')}<div><h3 style="margin:0">${esc(p.title)} abrechnen</h3><p class="hint" style="margin:2px 0 0">Total ${chf(r.total)}, pro Person ${chf(r.total/2)}</p></div></div>
@@ -1009,9 +1015,10 @@ function openSettings(){
    <div class="setting"><span>💧 Wasser trinken</span><button class="switch" role="switch" data-featw="1" aria-checked="${!!(P.water&&P.water.on)}" aria-label="Wasser trinken"></button></div>
    <p class="hint" style="margin:6px 2px 2px">Ausgeschaltetes verschwindet aus der Leiste und von der Startseite. Deine Daten bleiben erhalten.</p></div>
   ${FEAT().split?`<div class="sgroup">Split</div><div class="card">
-   <div class="setting"><div><label for="s-twint">TWINT-App</label><div class="hint" style="margin:0">Welche TWINT-App „Jetzt twinten“ öffnet</div></div><select class="inp" id="s-twint" style="max-width:45%"><option value="0"${!+(P.twint||0)?' selected':''}>Automatisch</option>${[...Array(39)].map((_,i)=>`<option value="${i+1}"${+(P.twint||0)===i+1?' selected':''}>Variante ${i+1}</option>`).join('')}</select></div>
-   <div class="setting"><span>TWINT öffnen testen</span><button class="today-btn" id="s-twtest">Testen</button></div>
-   <p class="hint" style="margin:6px 2px 2px">Jede Bank hat ihre eigene TWINT-App. Öffnet sich mit „Automatisch“ nichts, probiere die Varianten durch, bis deine TWINT-App aufgeht.</p></div>`:''}
+   <div class="setting"><div><label for="s-twint">TWINT-App</label><div class="hint" style="margin:0">${twintN()?'Gefunden ✓ „Jetzt twinten“ öffnet sie direkt':'Noch nicht eingerichtet'}</div></div><select class="inp" id="s-twint" style="max-width:45%"><option value="0"${!+(P.twint||0)?' selected':''}>Nicht eingerichtet</option>${[...Array(39)].map((_,i)=>`<option value="${i+1}"${+(P.twint||0)===i+1?' selected':''}>Variante ${i+1}</option>`).join('')}</select></div>
+   <div class="setting"><div><span>TWINT-App suchen</span><div class="hint" style="margin:0">${twSearch?`Variante ${twSearch} ging nicht? Tippe auf Weiter.`:'Spotzi probiert die Varianten der Reihe nach'}</div></div><button class="today-btn" id="s-twfind">${twSearch?(twSearch<39?`Weiter (${twSearch+1} von 39)`:'Von vorne'):'Suche starten'}</button></div>
+   ${twintN()?'<div class="setting"><span>TWINT öffnen testen</span><button class="today-btn" id="s-twtest">Testen</button></div>':''}
+   <p class="hint" style="margin:6px 2px 2px">Jede Bank hat ihre eigene TWINT-App mit eigener Adresse. Bei der Suche öffnet Spotzi eine Variante nach der anderen. Kommt „Adresse ungültig“, tippe auf OK und dann auf Weiter. Sobald deine TWINT-App aufgeht, merkt sich Spotzi die Variante automatisch.</p></div>`:''}
   ${FEAT().cal?`<div class="sgroup">Andere Kalender</div><div class="card">
    ${(S.calsubs||[]).map(c=>{const x=loadExt(c.id);return `<div class="setting"><span class="tag" style="--cat:var(${S.user==='sevi'?'--c-sevi':'--c-her'});font-size:14px;color:var(--ink)">📅 ${esc(c.name)}${c.vis==='shared'?' · Beide':''}${x.err?' ⚠️':''}</span><button class="today-btn" data-sub="${c.id}">Bearbeiten</button></div>`}).join('')}
    <div class="setting"><div><span>Kalender abonnieren</span><div class="hint" style="margin:0">Google, iCloud, Outlook … per Link, aktualisiert sich automatisch</div></div><button class="today-btn" id="sub-new">+ Abo</button></div>
@@ -1054,7 +1061,8 @@ function openSettings(){
       if(b.dataset.sub){openSub(S.calsubs.find(x=>x.id===b.dataset.sub));return}
       if(b.id==='sub-new'){openSub(null);return}
       if(b.id==='imp'){openImport();return}
-      if(b.id==='s-twtest'){location.href=twintUrl();return}
+      if(b.id==='s-twtest'){tryScheme(`twint-issuer${twintN()}://`);return}
+      if(b.id==='s-twfind'){const k=twSearch>=39?1:twSearch+1;twSearch=k;upd();tryScheme(`twint-issuer${k}://`,()=>{P.twint=k;twSearch=0;save();setTimeout(()=>{if(layer.innerHTML)upd()},300);toast(`TWINT gefunden (Variante ${k}). Spotzi merkt sich das.`)});return}
       if(b.id==='feed-new'){P.feedToken=newToken();upd();toast('Abo-Link erstellt');return}
       if(b.id==='feed-copy'){navigator.clipboard?.writeText(feedUrl()).then(()=>toast('Link kopiert'),()=>{});return}
       if(b.dataset.dacc!==undefined){setD({accent:b.dataset.dacc||null});return}
