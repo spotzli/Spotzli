@@ -504,4 +504,4 @@ body[data-season]:not([data-season=""]) .hero::after{background:var(--season-b);
 .twsteps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px}
 /* Text nicht markierbar (wie eine native App); Eingabefelder bleiben normal */
 body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-input,textarea,select,[contenteditable="true"],.feedurl,.invite{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+input,textarea,select,[contenteditable="true"]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
