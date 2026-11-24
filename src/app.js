@@ -612,7 +612,7 @@ function openTwintSetup(back,amt){let k=0;let found=0;
    $('#tw-cancel').onclick=()=>{closeSheet();if(back)back()};
    $('#tw-next').onclick=()=>{k=k>=39?1:k+1;const n=k;draw(sh);tryScheme(`twint-issuer${n}://`,()=>{S.prefs.twint=n;delete S.prefs.twTry;found=n;save();draw(sh)})}};
   openSheet('<div id="twsetup"></div>',sh=>draw(sh.querySelector('#twsetup')))}
-const SP_PAY=[['twint','TWINT'],['bar','Bar'],['bank','Überweisung'],['other','Anders']];
+const SP_PAY=[['twint','TWINT'],['other','Anders']];
 function openSettle(id){const p=S.splits.find(x=>x.id===id);if(!p)return;const r=spCalc(id);const me=S.user;let how='twint';
   const txt=!r.debtor?'Ihr seid quitt, niemand muss etwas zahlen.':r.debtor===me?`Du zahlst ${esc(USERS[r.creditor].name)} <b>${chf(r.owe)}</b>.`:`${esc(USERS[r.debtor].name)} zahlt dir <b>${chf(r.owe)}</b>.`;
   openSheet(`<div class="ask">${lumoSvg(r.debtor?'think':'happy')}<div><h3 style="margin:0">${esc(p.title)} abrechnen</h3><p class="hint" style="margin:2px 0 0">Total ${chf(r.total)}, pro Person ${chf(r.total/2)}</p></div></div>
@@ -626,7 +626,7 @@ function openSettle(id){const p=S.splits.find(x=>x.id===id);if(!p)return;const r
     const hw=$('#st-how');if(hw)hw.onclick=e=>{const b=e.target.closest('[data-sthow]');if(!b)return;how=b.dataset.sthow;sh.querySelectorAll('[data-sthow]').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#st-twwrap').hidden=!(how==='twint'&&r.debtor===me)};
     const tw=$('#st-twint');if(tw)tw.onclick=()=>openTwint(r.owe,()=>{tw.textContent=twBtnLabel();$('#st-twhint').textContent=twHint()});
     $('#st-done').onclick=e=>{const b=e.target;if(!b.dataset.sure){b.dataset.sure='1';b.textContent='Wirklich löschen?';return}
-      const lab=r.debtor?' ('+SP_PAY.find(x=>x[0]===how)[1].toLowerCase().replace('twint','TWINT')+')':'';
+      const lab=r.debtor&&how==='twint'?' (TWINT)':'';
       spRemove(id);closeSheet();render();window.scrollTo(0,0);toast(p.title+' abgerechnet'+lab+' und gelöscht 🎉')};
   })}
 /* ---------- Kalender-Abos (Google, iCloud, Outlook …) ---------- */
