@@ -524,7 +524,9 @@ function loadExt(id){if(extCache[id])return extCache[id];let v=null;try{v=JSON.p
 function storeExt(id,c){extCache[id]=c;try{localStorage.setItem('spozli-ics-'+id,JSON.stringify({at:c.at,err:c.err,vevents:c.vevents}))}catch(e){try{localStorage.removeItem('spozli-ics-'+id)}catch(_){}}}
 function syncExtCats(){
   for(const k of Object.keys(CATS))if(k.startsWith('ext:'))delete CATS[k];
-  (S.calsubs||[]).forEach((c,i)=>{const v='--c-ext'+i;document.documentElement.style.setProperty(v,c.color||'#5B6584');CATS['ext:'+c.id]={label:c.name||'Kalender',owner:c.vis==='shared'?'both':S.user,v,sym:'📅 ',ext:true}});
+  // Abo-Termine immer in der Privat-Farbe der Person, die sie ansieht
+  const v=S.user==='sevi'?'--c-sevi':'--c-her';
+  (S.calsubs||[]).forEach(c=>{CATS['ext:'+c.id]={label:c.name||'Kalender',owner:c.vis==='shared'?'both':S.user,v,sym:'📅 ',ext:true}});
 }
 function extEvents(){const out=[];const from=addDays(TODAY,-120),to=addDays(TODAY,400);
   for(const sub of S.calsubs||[]){const c=loadExt(sub.id);const key=c.at+'|'+from;
@@ -553,14 +555,12 @@ function openSub(sub){
    <b>iCloud / Apple:</b> Kalender-App → Kalender (ⓘ) → „Öffentlicher Kalender“ einschalten → Link teilen/kopieren.<br>
    <b>Outlook:</b> outlook.com → Einstellungen → Kalender → Freigegebene Kalender → „Kalender veröffentlichen“ → ICS-Link kopieren.</div></details>
   <div class="field"><label for="sb-name">Name</label><input class="inp" id="sb-name" value="${esc(f.name)}" placeholder="z. B. Arbeit, Familie"></div>
-  <div class="field"><span class="lbl">Farbe</span><div class="swatches" style="justify-content:flex-start">${SUBCOLORS.map(col=>`<button type="button" class="sw" style="background:${col}" data-sbc="${col}" aria-pressed="${f.color===col}" aria-label="Farbe"></button>`).join('')}</div></div>
   <div class="field"><span class="lbl">Wer sieht die Termine?</span><div class="seg vseg"><button type="button" data-sbv="private" aria-pressed="${f.vis!=='shared'}">Nur ich</button><button type="button" data-sbv="shared" aria-pressed="${f.vis==='shared'}">Beide</button></div></div>
   ${c?`<p class="hint">${c.err?'⚠️ '+esc(c.err):c.at?'Zuletzt aktualisiert: '+new Date(c.at).toLocaleString('de-DE',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})+' · '+(c.vevents||[]).length+' Einträge':'Noch nicht geladen'}</p>`:''}
   <p class="hint">Abonnierte Termine aktualisieren sich automatisch und sind in Spotzi nur zum Ansehen. Ändern kannst du sie im ursprünglichen Kalender.</p>
   <div class="btns">${isNew?'':'<button class="btn danger" id="sb-del">Entfernen</button>'}<button class="btn primary" id="sb-save">${isNew?'Abonnieren':'Speichern & aktualisieren'}</button></div>`,sh=>{
     const $=q=>sh.querySelector(q);
     sh.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
-      if(b.dataset.sbc){f.color=b.dataset.sbc;sh.querySelectorAll('[data-sbc]').forEach(x=>x.setAttribute('aria-pressed',x===b))}
       if(b.dataset.sbv){f.vis=b.dataset.sbv;sh.querySelectorAll('[data-sbv]').forEach(x=>x.setAttribute('aria-pressed',x===b))}});
     $('#sb-save').onclick=async()=>{f.url=$('#sb-url').value.trim();f.name=$('#sb-name').value.trim()||'Kalender';
       if(!/^(https?|webcals?):\/\//i.test(f.url)){toast('Bitte einen Link einfügen, der mit https:// oder webcal:// beginnt');return}
@@ -925,7 +925,7 @@ function openSettings(){
    <div class="setting"><span>💧 Wasser trinken</span><button class="switch" role="switch" data-featw="1" aria-checked="${!!(P.water&&P.water.on)}" aria-label="Wasser trinken"></button></div>
    <p class="hint" style="margin:6px 2px 2px">Ausgeschaltetes verschwindet aus der Leiste und von der Startseite. Deine Daten bleiben erhalten.</p></div>
   ${FEAT().cal?`<div class="sgroup">Andere Kalender</div><div class="card">
-   ${(S.calsubs||[]).map(c=>{const x=loadExt(c.id);return `<div class="setting"><span class="tag" style="--cat:${c.color};font-size:14px;color:var(--ink)">${esc(c.name)}${c.vis==='shared'?' · Beide':''}${x.err?' ⚠️':''}</span><button class="today-btn" data-sub="${c.id}">Bearbeiten</button></div>`}).join('')}
+   ${(S.calsubs||[]).map(c=>{const x=loadExt(c.id);return `<div class="setting"><span class="tag" style="--cat:var(${S.user==='sevi'?'--c-sevi':'--c-her'});font-size:14px;color:var(--ink)">📅 ${esc(c.name)}${c.vis==='shared'?' · Beide':''}${x.err?' ⚠️':''}</span><button class="today-btn" data-sub="${c.id}">Bearbeiten</button></div>`}).join('')}
    <div class="setting"><div><span>Kalender abonnieren</span><div class="hint" style="margin:0">Google, iCloud, Outlook … per Link, aktualisiert sich automatisch</div></div><button class="today-btn" id="sub-new">+ Abo</button></div>
    <div class="setting"><div><span>Datei importieren</span><div class="hint" style="margin:0">Einmalig aus einer .ics-Datei übernehmen</div></div><button class="today-btn" id="imp">Import</button></div></div>
   <div class="sgroup">Spotzi im iPhone-Kalender</div><div class="card">
