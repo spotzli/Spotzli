@@ -589,11 +589,14 @@ function tryScheme(url,onOk){let done=false;const h=()=>{if(document.hidden&&!do
   const off=()=>{document.removeEventListener('visibilitychange',h);window.removeEventListener('pagehide',h)};
   document.addEventListener('visibilitychange',h);window.addEventListener('pagehide',h);setTimeout(off,15000);
   location.href=url}
-function openTwint(c){const amt=(c/100).toFixed(2);const n=twintN();
+// Ohne gespeicherte App sucht der Knopf selbst: jeder Tipp probiert die nächste Adresse, die passende wird gemerkt.
+function twBtnLabel(){const n=twintN(),t=+(S.prefs.twTry||0);return n||!t?'Jetzt twinten':t<39?`Jetzt twinten (weiter suchen ${t+1}/39)`:'Jetzt twinten (Suche von vorne)'}
+function twHint(){return twintN()?'Spotzi kopiert den Betrag und öffnet TWINT. Dort Empfänger wählen und Betrag einfügen.':'Beim ersten Mal sucht Spotzi deine TWINT-App. Kommt „Adresse ungültig“, tippe auf OK und nochmal auf „Jetzt twinten“. Sobald TWINT aufgeht, merkt sich Spotzi die App, danach geht es mit einem Tipp.'}
+function openTwint(c,onTry){const amt=(c/100).toFixed(2);const n=twintN();
   const cp=navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(amt):Promise.reject();
-  cp.then(()=>{},()=>{}).finally(()=>{
-    if(!n){openTwintSetup(null,amt);return}
-    toast(`${amt} kopiert. In TWINT: Senden, Empfänger wählen, Betrag einfügen.`);tryScheme(`twint-issuer${n}://`)})}
+  if(n){cp.then(()=>toast(`${amt} kopiert. In TWINT: Senden, Empfänger wählen, Betrag einfügen.`),()=>{});tryScheme(`twint-issuer${n}://`);return}
+  const t=+(S.prefs.twTry||0);const k=t>=39?1:t+1;S.prefs.twTry=k;save();onTry&&onTry();cp.catch(()=>{});
+  tryScheme(`twint-issuer${k}://`,()=>{S.prefs.twint=k;delete S.prefs.twTry;save();onTry&&onTry()})}
 // Einrichtung: Spotzi probiert twint-issuer1..39 der Reihe nach. Geht die App auf, wird die Nummer gespeichert.
 function openTwintSetup(back,amt){let k=0;let found=0;
   const draw=sh=>{sh.innerHTML=found?`<div class="ask">${lumoSvg('party')}<div><h3 style="margin:0">TWINT gefunden 🎉</h3><p class="hint" style="margin:2px 0 0">Ab jetzt öffnet „Jetzt twinten“ deine TWINT-App direkt.</p></div></div><div class="btns"><button class="btn primary" id="tw-ok">Fertig</button></div>`
@@ -607,7 +610,7 @@ function openTwintSetup(back,amt){let k=0;let found=0;
    const $=q=>sh.querySelector(q);
    if(found){$('#tw-ok').onclick=()=>{closeSheet();if(back)back()};return}
    $('#tw-cancel').onclick=()=>{closeSheet();if(back)back()};
-   $('#tw-next').onclick=()=>{k=k>=39?1:k+1;const n=k;draw(sh);tryScheme(`twint-issuer${n}://`,()=>{S.prefs.twint=n;found=n;save();draw(sh)})}};
+   $('#tw-next').onclick=()=>{k=k>=39?1:k+1;const n=k;draw(sh);tryScheme(`twint-issuer${n}://`,()=>{S.prefs.twint=n;delete S.prefs.twTry;found=n;save();draw(sh)})}};
   openSheet('<div id="twsetup"></div>',sh=>draw(sh.querySelector('#twsetup')))}
 const SP_PAY=[['twint','TWINT'],['bar','Bar'],['bank','Überweisung'],['other','Anders']];
 function openSettle(id){const p=S.splits.find(x=>x.id===id);if(!p)return;const r=spCalc(id);const me=S.user;let how='twint';
@@ -615,13 +618,13 @@ function openSettle(id){const p=S.splits.find(x=>x.id===id);if(!p)return;const r
   openSheet(`<div class="ask">${lumoSvg(r.debtor?'think':'happy')}<div><h3 style="margin:0">${esc(p.title)} abrechnen</h3><p class="hint" style="margin:2px 0 0">Total ${chf(r.total)}, pro Person ${chf(r.total/2)}</p></div></div>
   <div class="card spsettle"><div class="setting"><span>${esc(USERS.sevi.name)} hat bezahlt</span><b>${chf(r.paid.sevi)}</b></div><div class="setting"><span>${esc(USERS.sie.name)} hat bezahlt</span><b>${chf(r.paid.sie)}</b></div><div class="spres">${txt}</div></div>
   ${r.debtor?`<div class="field"><span class="lbl">Wie wird bezahlt?</span><div class="seg vseg" id="st-how">${SP_PAY.map(([k,l])=>`<button type="button" data-sthow="${k}" aria-pressed="${k===how}">${l}</button>`).join('')}</div></div>
-  <div id="st-twwrap"${how==='twint'&&r.debtor===me?'':' hidden'}><div class="btns"><button class="btn twint" id="st-twint">Jetzt twinten</button></div><p class="hint" style="text-align:center;margin-top:4px">Spotzi kopiert den Betrag und öffnet TWINT. Dort Empfänger wählen und Betrag einfügen.</p></div>`:''}
+  <div id="st-twwrap"${how==='twint'&&r.debtor===me?'':' hidden'}><div class="btns"><button class="btn twint" id="st-twint">${twBtnLabel()}</button></div><p class="hint" id="st-twhint" style="text-align:center;margin-top:4px">${twHint()}</p></div>`:''}
   <p class="hint">Wenn alles bezahlt ist, bestätige mit „Abgerechnet“. Das Projekt wird dann mit allen Ausgaben gelöscht, für euch beide.</p>
   <div class="btns"><button class="btn" id="st-cancel">Noch nicht</button><button class="btn primary" id="st-done">Abgerechnet</button></div>`,sh=>{
     const $=q=>sh.querySelector(q);
     $('#st-cancel').onclick=closeSheet;
     const hw=$('#st-how');if(hw)hw.onclick=e=>{const b=e.target.closest('[data-sthow]');if(!b)return;how=b.dataset.sthow;sh.querySelectorAll('[data-sthow]').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#st-twwrap').hidden=!(how==='twint'&&r.debtor===me)};
-    const tw=$('#st-twint');if(tw)tw.onclick=()=>openTwint(r.owe);
+    const tw=$('#st-twint');if(tw)tw.onclick=()=>openTwint(r.owe,()=>{tw.textContent=twBtnLabel();$('#st-twhint').textContent=twHint()});
     $('#st-done').onclick=e=>{const b=e.target;if(!b.dataset.sure){b.dataset.sure='1';b.textContent='Wirklich löschen?';return}
       const lab=r.debtor?' ('+SP_PAY.find(x=>x[0]===how)[1].toLowerCase().replace('twint','TWINT')+')':'';
       spRemove(id);closeSheet();render();window.scrollTo(0,0);toast(p.title+' abgerechnet'+lab+' und gelöscht 🎉')};
