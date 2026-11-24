@@ -12,6 +12,8 @@ const COLLECTIONS = {
   habits: { kind: 'habit', vis: () => 'private' },
   calsubs: { kind: 'calsub', vis: (r) => (r.vis === 'shared' ? 'shared' : 'private') },
   countdowns: { kind: 'countdown', vis: (r) => (r.vis === 'shared' ? 'shared' : 'private') },
+  splits: { kind: 'split', vis: () => 'shared' },
+  splitExp: { kind: 'splitexp', vis: () => 'shared' },
 };
 const stable = (v) => {
   if (Array.isArray(v)) return '[' + v.map(stable).join(',') + ']';
@@ -19,7 +21,7 @@ const stable = (v) => {
   return JSON.stringify(v ?? null);
 };
 const strip = (r) => { const d = JSON.parse(JSON.stringify(r)); delete d.id; return d; };
-const MANAGED = new Set(['event', 'todo', 'chore', 'chorelog', 'shop', 'habit', 'calsub', 'countdown', 'recent', 'note', 'prefs', 'avatar']);
+const MANAGED = new Set(['event', 'todo', 'chore', 'chorelog', 'shop', 'habit', 'calsub', 'countdown', 'split', 'splitexp', 'recent', 'note', 'prefs', 'avatar']);
 
 export function createStore({ supabase, householdId, userId, onRemoteChange, onStatus }) {
   const KEY = `spozli-cache-${householdId}-${userId}`;
@@ -57,7 +59,7 @@ export function createStore({ supabase, householdId, userId, onRemoteChange, onS
 
   // App-Zustand aus den Zeilen aufbauen (in-place, UI-Felder bleiben)
   function applyToState(S) {
-    const by = { event: [], todo: [], chore: [], chorelog: [], shop: [], habit: [], calsub: [], countdown: [] };
+    const by = { event: [], todo: [], chore: [], chorelog: [], shop: [], habit: [], calsub: [], countdown: [], split: [], splitexp: [] };
     const avatars = {};
     let recent = null, prefs = null;
     const notes = {};
@@ -78,6 +80,8 @@ export function createStore({ supabase, householdId, userId, onRemoteChange, onS
     S.habits = by.habit;
     S.calsubs = by.calsub;
     S.countdowns = by.countdown;
+    S.splits = by.split;
+    S.splitExp = by.splitexp;
     S.avatars = avatars;
     S.recent = recent || [];
     S.notes = notes;
