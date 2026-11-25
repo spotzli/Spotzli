@@ -968,7 +968,7 @@ function openForm(ev,preset){
       $('#f-yearwrap').hidden=!sp;$('#f-repwrap').hidden=sp;$('#f-alldaywrap').hidden=sp;$('#f-endwrap').hidden=sp;
       if(sp){$('#f-allday').checked=true;$('#f-rep').value='yearly'}
       $('#f-title-l').textContent=k==='bday'?'Wer hat Geburtstag?':k==='anniv'?'Was feiert ihr?':'Titel';
-      $('#f-title').placeholder=k==='bday'?'z. B. Mama':k==='anniv'?'z. B. Sevi & Vivien':'Neuer Termin';
+      $('#f-title').placeholder=k==='bday'?'z. B. Mama':k==='anniv'?'z. B. Unser Jahrestag':'Neuer Termin';
       $('#f-year-l').textContent=k==='bday'?'Geburtsjahr (optional, für das Alter)':'Seit welchem Jahr? (optional)';drawAll()};
     $('#f-kind').onclick=e=>{const b=e.target.closest('[data-kind]');if(!b)return;const was=f.kind||'event';f.kind=b.dataset.kind;
       s.querySelectorAll('[data-kind]').forEach(x=>x.setAttribute('aria-pressed',x===b));
@@ -1101,7 +1101,7 @@ function openSettings(){
 
 function openJoin(){
   openSheet(`<h3>Mit Einladungscode verbinden</h3>
-  <div class="field"><label for="j-code">Einladungscode</label><input class="inp" id="j-code" autocapitalize="characters" maxlength="6" placeholder="z. B. 4F2A9C"></div>
+  <div class="field"><label for="j-code">Einladungscode</label><input class="inp" id="j-code" autocapitalize="characters" maxlength="12" placeholder="z. B. K7M2Q9XH"></div>
   <div class="field"><label for="j-name">Dein Name</label><input class="inp" id="j-name" value="${esc(USERS[S.user].name)}"></div>
   <p class="hint">Achtung: Was du bisher in deinem eigenen Haushalt eingetragen hast, wird dabei gelöscht. Danach seht ihr gemeinsame Einträge zusammen.</p>
   <div class="btns"><button class="btn" id="j-cancel">Abbrechen</button><button class="btn primary" id="j-go">Verbinden</button></div>`,sh=>{
@@ -1109,7 +1109,8 @@ function openJoin(){
     sh.querySelector('#j-go').onclick=async e=>{const b=e.target;const code=sh.querySelector('#j-code').value.trim(),name=sh.querySelector('#j-name').value.trim();
       if(!code){toast('Bitte gib den Einladungscode ein');return}
       b.disabled=true;b.textContent='Einen Moment …';
-      const {error}=await ctx.supabase.rpc('switch_household',{p_code:code,p_name:name});
+      const {data,error}=await ctx.supabase.rpc('switch_household',{p_code:code,p_name:name});
+      if(!error&&data&&data.error){b.disabled=false;b.textContent='Verbinden';toast(data.error);return}
       if(error){b.disabled=false;b.textContent='Verbinden';const m=error.message||'';toast(/find the function|does not exist|schema cache/i.test(m)?'Das Update auf dem Server fehlt noch (switch_household.sql).':m);return}
       try{Object.keys(localStorage).filter(k=>k.startsWith('spozli-cache-')||k==='spozli-ctx').forEach(k=>localStorage.removeItem(k))}catch(_){}
       location.reload()}});
@@ -1119,7 +1120,7 @@ function openAccount(){
   const other=S.user==='sevi'?'sie':'sevi';
   openSheet(`<div class="profhead">${avatarHtml(S.user,'bigav','id="av-pick" aria-label="Profilbild ändern"')}<div><h3 style="margin:0">${esc(me)}</h3><p class="hint" style="margin:2px 0 0">Angemeldet als ${esc(ctx.email||'')}</p></div></div>
   <div class="btns" style="margin-top:10px"><button class="btn" id="av-btn">${(S.avatars||{})[S.user]?'Profilbild ändern':'Profilbild wählen'}</button>${(S.avatars||{})[S.user]?'<button class="btn" id="av-del">Entfernen</button>':''}</div><input type="file" accept="image/*" id="av-file" hidden>
-  <div class="card" style="margin-top:10px">${partner?`<div class="setting"><span>Verbunden mit</span><span style="display:flex;align-items:center;gap:8px">${avatarHtml(other,'avatar sm','tabindex="-1"')}<b>${esc(USERS[other].name)}</b></span></div>`:`<div class="setting col"><b>Partner einladen</b><span class="hint" style="margin:0">Schick diesen Code an die zweite Person. Sie erstellt in Spotzi ein Konto und wählt „Ich habe einen Einladungscode“.</span><div class="invite" id="invite">${esc(ctx.inviteCode||'')}</div><button class="btn" id="copy-code">Code kopieren</button></div><div class="setting col"><b>Du hast selbst einen Code bekommen?</b><span class="hint" style="margin:0">Dann verbinde dich hier mit dem Haushalt deines Partners.</span><button class="btn" id="join-code">Mit Einladungscode verbinden</button></div>`}
+  <div class="card" style="margin-top:10px">${partner?`<div class="setting"><span>Verbunden mit</span><span style="display:flex;align-items:center;gap:8px">${avatarHtml(other,'avatar sm','tabindex="-1"')}<b>${esc(USERS[other].name)}</b></span></div>`:`<div class="setting col"><b>Partner einladen</b><span class="hint" style="margin:0">Schick diesen Code an die zweite Person. Sie erstellt in Spotzi ein Konto und wählt „Ich habe einen Einladungscode“.</span><div class="invite" id="invite">${esc(ctx.inviteCode||'')}</div><div class="btns"><button class="btn" id="copy-code">Code kopieren</button><button class="btn" id="renew-code">Neuer Code</button></div></div><div class="setting col"><b>Du hast selbst einen Code bekommen?</b><span class="hint" style="margin:0">Dann verbinde dich hier mit dem Haushalt deines Partners.</span><button class="btn" id="join-code">Mit Einladungscode verbinden</button></div>`}
    <div class="setting"><span>Synchronisierung</span><span class="hint" style="margin:0">${syncText()}</span></div></div>
   <div class="btns" style="margin-top:16px"><button class="btn danger" id="logout">Abmelden</button><button class="btn primary" id="acc-ok">Fertig</button></div>`,sh=>{
     sh.querySelector('#acc-ok').onclick=closeSheet;
@@ -1129,6 +1130,11 @@ function openAccount(){
     sh.querySelector('#logout').onclick=e=>{const b=e.target;if(ctx.store.pending()&&!b.dataset.sure){b.dataset.sure='1';b.textContent='Ungesendete Änderungen! Trotzdem abmelden?';return}if(!b.dataset.sure2&&!ctx.store.pending()){b.dataset.sure2='1';b.textContent='Wirklich abmelden?';return}ctx.onSignOut()};
     const jc=sh.querySelector('#join-code');if(jc)jc.onclick=openJoin;
     const cc=sh.querySelector('#copy-code');if(cc)cc.onclick=()=>{navigator.clipboard?.writeText(ctx.inviteCode).then(()=>toast('Code kopiert'),()=>{})};
+    const rc=sh.querySelector('#renew-code');if(rc)rc.onclick=async()=>{if(!rc.dataset.sure){rc.dataset.sure='1';rc.textContent='Alter Code wird ungültig. Sicher?';return}
+      rc.disabled=true;const {data,error}=await ctx.supabase.rpc('renew_invite_code');
+      if(error||!data){rc.disabled=false;const m=error?.message||'';toast(/find the function|does not exist|schema cache/i.test(m)?'Das Update auf dem Server fehlt noch (haushalt_sicherheit.sql).':'Neuer Code ging nicht. Bitte nochmal versuchen.');return}
+      ctx.inviteCode=data;try{const k='spozli-ctx',c=JSON.parse(localStorage.getItem(k)||'null');if(c&&c.inviteCode!==undefined){c.inviteCode=data;localStorage.setItem(k,JSON.stringify(c))}}catch(_){}
+      openAccount();toast('Neuer Code erstellt')};
   });
 }
 
