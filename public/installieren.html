@@ -8,55 +8,123 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <style>
-:root{--bg:#F3F5FA;--card:#fff;--ink:#1A1E2E;--muted:#5C637A;--acc:#4C5BD4;--line:#E2E6F0}
+:root{--bg:#F3F5FA;--card:#fff;--ink:#1A1E2E;--muted:#5C637A;--acc:#4C5BD4;--line:#E2E6F0;--hl:#FF9F0A}
 @media (prefers-color-scheme:dark){:root{--bg:#0B0F1E;--card:#161B2E;--ink:#EEF0F7;--muted:#A3A9BF;--acc:#8C97F5;--line:#262C44}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;padding:max(24px,env(safe-area-inset-top)) 16px 40px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;padding:max(24px,env(safe-area-inset-top)) 16px 48px}
 main{max-width:460px;margin:0 auto}
-.hero{text-align:center;margin:12px 0 22px}
-.hero img{width:88px;height:88px;border-radius:22px;box-shadow:0 6px 20px rgba(0,0,0,.15)}
-h1{font-size:26px;margin:14px 0 4px}
+.hero{text-align:center;margin:8px 0 18px}
+.hero img{width:80px;height:80px;border-radius:20px;box-shadow:0 6px 20px rgba(0,0,0,.15)}
+h1{font-size:26px;margin:12px 0 4px}
 .sub{color:var(--muted);margin:0}
-.btn{display:block;text-align:center;background:var(--acc);color:#fff;text-decoration:none;font-weight:700;font-size:18px;padding:15px;border-radius:14px;margin:0 0 10px}
-.btn.sec{background:transparent;color:var(--acc);border:1.5px solid var(--acc);font-size:16px;padding:12px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:16px 0}
-.card h2{font-size:17px;margin:0 0 8px}
-ol{margin:0;padding-left:22px}li{margin:6px 0}
-.hint{color:var(--muted);font-size:14px}
-b{font-weight:650}
-.warn{display:none}
+.btn{display:block;text-align:center;background:var(--acc);color:#fff;text-decoration:none;font-weight:700;font-size:18px;padding:15px;border-radius:14px;margin:0}
+.btn.sec{background:transparent;color:var(--acc);border:1.5px solid var(--acc);font-size:16px;padding:12px;margin-top:24px}
+.note{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:14px 0;font-size:15px}
+.note.warn{border-color:var(--hl);display:none}
+.step{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:22px 0}
+.num{width:34px;height:34px;border-radius:50%;background:var(--acc);color:#fff;font-weight:800;display:grid;place-items:center}
+.step h2{font-size:17px;margin:4px 0 4px;line-height:1.3}
+.step p{margin:0 0 10px;color:var(--muted);font-size:15px}
+.step.key h2::after{content:"Wichtig";margin-left:8px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;background:var(--hl);color:#000;border-radius:6px;padding:2px 6px;vertical-align:2px}
+b{font-weight:650;color:var(--ink)}
+.ios b{color:#fff}
+/* iPhone-Mockups */
+.ios{background:#1C1C1E;color:#fff;border-radius:18px;padding:12px;font:14px/1.35 -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.18)}
+.ios .bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.ios .x{width:28px;height:28px;border-radius:50%;background:#2C2C2E;display:grid;place-items:center;color:#aaa;font-size:15px}
+.ios .t{font-weight:700}
+.ios .pill{background:#0A84FF;color:#fff;font-weight:600;border-radius:999px;padding:5px 12px}
+.ios .grp{background:#2C2C2E;border-radius:12px;padding:10px 12px}
+.ios .row{display:flex;align-items:center;gap:10px}
+.ios .ico{width:30px;height:30px;border-radius:7px;background:#3A3A3C;display:grid;place-items:center;font-size:16px;flex:none}
+.ios .dim{color:#98989D}
+.ios .red{color:#FF453A}
+.ios .chev{margin-left:auto;color:#636366}
+.ios .alert{background:#2C2C2E;border-radius:14px;text-align:center;padding:14px 12px 0;max-width:260px;margin:4px auto}
+.ios .alert .btns{display:flex;border-top:1px solid #3A3A3C;margin:12px -12px 0}
+.ios .alert .btns span{flex:1;padding:10px;color:#0A84FF}
+.ios .alert .btns span+span{border-left:1px solid #3A3A3C}
+.ios .alert .one{border-top:1px solid #3A3A3C;margin:12px -12px 0;padding:10px;color:#0A84FF}
+.ios .dots{display:flex;gap:12px;justify-content:center;margin:10px 0 4px}
+.ios .dots i{width:12px;height:12px;border-radius:50%;border:1.5px solid #fff}
+.ios .sheet{background:#2C2C2E;border-radius:12px;padding:10px;text-align:center;margin-top:10px}
+.ios .sheet .go{color:#FF453A;font-weight:600;padding-top:8px;border-top:1px solid #3A3A3C;margin-top:8px}
+.hl{position:relative;outline:3px solid var(--hl);outline-offset:3px;border-radius:999px;animation:pulse 1.6s ease-in-out infinite}
+span.hl{border-radius:8px}
+.hand{color:var(--hl);font-weight:800;font-size:13px;text-align:right;margin-top:4px}
+@keyframes pulse{50%{outline-color:transparent}}
+@media (prefers-reduced-motion:reduce){.hl{animation:none}}
+.home{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;justify-items:center;padding:6px 4px}
+.home div{width:44px;height:44px;border-radius:11px;background:#3A3A3C}
+.home img{width:44px;height:44px;border-radius:11px}
+.home .lbl{grid-column:1/-1;font-size:12px;color:#98989D}
 </style>
 </head>
 <body>
 <main>
-  <div class="hero"><img src="apple-touch-icon.png" alt=""><h1>Spotzi aufs iPhone</h1><p class="sub">Mit einem Tipp auf den Home-Bildschirm.</p></div>
+  <div class="hero"><img src="apple-touch-icon.png" alt=""><h1>Spotzi aufs iPhone</h1><p class="sub">Dauert etwa eine Minute. Diese Seite offen lassen und Schritt für Schritt folgen.</p></div>
 
-  <p class="card warn" id="not-safari"><b>Bitte in Safari öffnen.</b> Das Profil lässt sich nur in Safari laden. Tippe auf ••• oder Teilen und wähle „In Safari öffnen“, oder kopiere den Link und füge ihn in Safari ein.</p>
+  <p class="note warn" id="not-safari"><b>Bitte zuerst in Safari öffnen.</b> Hier geht es nicht. Tippe auf ••• oder das Teilen-Symbol und wähle „In Safari öffnen“. Oder den Link kopieren und in Safari einfügen.</p>
 
-  <a class="btn" href="spotzi.mobileconfig">Spotzi installieren</a>
+  <section class="step"><div class="num">1</div><div>
+    <h2>Hier tippen</h2>
+    <a class="btn" href="spotzi.mobileconfig">Spotzi installieren</a>
+  </div></section>
 
-  <div class="card">
-    <h2>So geht's</h2>
-    <ol>
-      <li>Oben auf <b>Spotzi installieren</b> tippen und <b>Erlauben</b> wählen.</li>
-      <li>Die Einstellungen öffnen. Ganz oben steht <b>Profil geladen</b>. Darauf tippen.<br><span class="hint">Falls es dort nicht steht: Einstellungen › Allgemein › VPN und Geräteverwaltung.</span></li>
-      <li>Rechts oben <b>Installieren</b> tippen, den iPhone-Code eingeben und noch zweimal <b>Installieren</b> bestätigen.</li>
-      <li>Fertig. Spotzi ist jetzt auf dem Home-Bildschirm.</li>
-    </ol>
-  </div>
+  <section class="step"><div class="num">2</div><div>
+    <h2>„Erlauben“ tippen</h2>
+    <p>Safari fragt, ob ein Profil geladen werden darf.</p>
+    <div class="ios"><div class="alert"><b>Diese Website versucht, ein Konfigurationsprofil zu laden.</b><div class="dim" style="margin-top:4px">Möchtest du dies erlauben?</div><div class="btns"><span>Ignorieren</span><span><span class="hl" style="padding:2px 6px">Erlauben</span></span></div></div></div>
+  </div></section>
 
-  <div class="card">
-    <h2>„Nicht verifiziert“?</h2>
-    <p class="hint" style="margin:0">Das ist normal. Das Profil ist nicht bei Apple registriert, weil Spotzi eine private App ist. Es legt nur das Spotzi-Symbol auf den Home-Bildschirm und ändert sonst nichts. Entfernen geht jederzeit unter Einstellungen › Allgemein › VPN und Geräteverwaltung › Spotzi › Profil entfernen.</p>
-  </div>
+  <section class="step"><div class="num">3</div><div>
+    <h2>„Schließen“ tippen</h2>
+    <p>Das Profil ist jetzt nur <b>geladen</b>, noch nicht installiert. Es geht in den Einstellungen weiter.</p>
+    <div class="ios"><div class="alert"><b>Profil geladen</b><div class="dim" style="margin-top:4px">Überprüfe das Profil in der App „Einstellungen“, wenn du es installieren möchtest.</div><div class="one"><span class="hl" style="padding:2px 6px">Schließen</span></div></div></div>
+  </div></section>
 
-  <div class="card">
-    <h2>Landet die Datei in „Downloads“?</h2>
-    <p class="hint" style="margin:0">Dann die App <b>Dateien</b> öffnen, unter <b>Downloads</b> auf <b>spotzi.mobileconfig</b> tippen und weiter bei Schritt 2.</p>
-  </div>
+  <section class="step"><div class="num">4</div><div>
+    <h2>Einstellungen öffnen, oben „Profil geladen“ tippen</h2>
+    <p>Die graue Zahnrad-App öffnen. Der Eintrag steht ganz oben, direkt unter deinem Namen.</p>
+    <div class="ios"><div class="grp"><div class="row"><div class="ico" style="border-radius:50%">👤</div><div>Dein Name<div class="dim" style="font-size:12px">Apple-Account, iCloud und mehr</div></div></div></div>
+      <div class="grp" style="margin-top:8px"><div class="row"><span class="hl" style="padding:2px 6px">Profil geladen</span><span class="chev">›</span></div></div></div>
+    <p style="margin-top:8px;font-size:13px">Steht es nicht da? Einstellungen › Allgemein › VPN und Geräteverwaltung › Spotzi.</p>
+  </div></section>
+
+  <section class="step key"><div class="num">5</div><div>
+    <h2>Oben rechts „Installieren“ tippen</h2>
+    <p>Diesen Schritt übersieht man leicht. Ohne ihn erscheint Spotzi <b>nicht</b> auf dem Home-Bildschirm.</p>
+    <div class="ios"><div class="bar"><span class="x">✕</span><span class="t">Profil</span><span class="pill hl">Installieren</span></div>
+      <div class="grp"><div class="row"><div class="ico">⚙️</div><div>Spotzi<div class="dim">Spotzi</div></div></div>
+      <div style="margin-top:8px"><span class="dim">Signiert von</span> <span class="red">Nicht signiert</span></div><div><span class="dim">Enthält</span> Web-Clip</div></div></div>
+    <p style="margin-top:8px;font-size:13px">„Nicht signiert“ ist normal: Spotzi ist eine private App und nicht bei Apple registriert.</p>
+  </div></section>
+
+  <section class="step"><div class="num">6</div><div>
+    <h2>iPhone-Code eingeben</h2>
+    <p>Derselbe Code wie zum Entsperren.</p>
+    <div class="ios" style="text-align:center"><b>Code eingeben</b><div class="dots"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+  </div></section>
+
+  <section class="step key"><div class="num">7</div><div>
+    <h2>Noch zweimal „Installieren“</h2>
+    <p>Zuerst wieder oben rechts, dann unten im Fenster bestätigen.</p>
+    <div class="ios"><div class="bar"><span class="x" style="visibility:hidden">✕</span><span class="t">Warnung</span><span class="pill hl">Installieren</span></div>
+      <div class="dim" style="font-size:12px">Das Profil ist nicht signiert.</div>
+      <div class="sheet">Profil installieren?<div class="go"><span class="hl" style="padding:2px 8px">Installieren</span></div></div></div>
+  </div></section>
+
+  <section class="step"><div class="num">8</div><div>
+    <h2>„Fertig“ tippen</h2>
+    <p>Spotzi liegt jetzt auf dem Home-Bildschirm, meistens auf der letzten Seite.</p>
+    <div class="ios"><div class="home"><div></div><div></div><div></div><img src="apple-touch-icon.png" alt="Spotzi"><span class="lbl" style="text-align:right;width:100%">Spotzi ↑</span></div></div>
+  </div></section>
+
+  <div class="note"><b>Nicht zu finden?</b> Auf dem Home-Bildschirm nach unten wischen und „Spotzi“ suchen. Oder ganz nach rechts in die App-Mediathek wischen. Falls bei Einstellungen › Home-Bildschirm & App-Mediathek „Nur App-Mediathek“ gewählt ist, auf „Zum Home-Bildschirm hinzufügen“ stellen.</div>
+  <div class="note"><b>Datei landet in „Downloads“?</b> Die App Dateien öffnen, unter Downloads auf spotzi.mobileconfig tippen, dann weiter bei Schritt 4.</div>
+  <div class="note"><b>Wieder entfernen:</b> Einstellungen › Allgemein › VPN und Geräteverwaltung › Spotzi › Profil entfernen. Das Profil ändert sonst nichts am iPhone.</div>
 
   <a class="btn sec" href="./">Ohne Installation im Browser öffnen</a>
-  <p class="hint" style="text-align:center">Alternativ in Safari: Teilen › „Zum Home-Bildschirm“.</p>
 </main>
 <script>
 // In-App-Browser (WhatsApp, Instagram, Chrome …) können keine Profile laden
