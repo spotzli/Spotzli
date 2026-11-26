@@ -25,6 +25,8 @@ Die Schlüssel für Web Push erzeugt die Funktion beim ersten Aufruf selbst und 
 
 Die App-Adresse in **Safari** öffnen → Teilen-Symbol → **Zum Home-Bildschirm**.
 
+Oder per Link (z. B. für Familie zum Testen): https://spotzli.github.io/Spotzli/installieren.html in **Safari** öffnen → „Spotzi installieren“ → Einstellungen → „Profil geladen“ → Installieren. Das Profil (`public/spotzi.mobileconfig`) ist ein unsigniertes Web-Clip-Profil, darum zeigt iOS „Nicht verifiziert“. GitHub Pages liefert `.mobileconfig` ohne eigenen Dateityp aus; landet die Datei in „Downloads“, in der Dateien-App antippen.
+
 ## Entwicklung
 
 ```bash
