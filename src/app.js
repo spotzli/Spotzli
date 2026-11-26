@@ -50,9 +50,10 @@ function T(ev,d){const y=fromIso(d||ev.date).getFullYear();
   if(ev.kind==='anniv')return '💍 '+ev.title+(ev.year?' · '+(y-ev.year)+'. Jahrestag':'');
   return ev.title}
 const LUMO=SAYINGS;
-const dayOfYear=()=>{const n=new Date();return Math.floor((n-new Date(n.getFullYear(),0,0))/864e5)};
+// Laufender Tageszähler (Tage seit 1970), damit auch Listen mit mehr als 365 Sprüchen ganz durchlaufen
+const dayNo=()=>{const n=new Date();return Math.round(Date.UTC(n.getFullYear(),n.getMonth(),n.getDate())/864e5)};
 let lumoIdx=null;
-function lumoToday(){return lumoIdx===null?(dayOfYear()-1)%LUMO.length:lumoIdx}
+function lumoToday(){return lumoIdx===null?dayNo()%LUMO.length:lumoIdx}
 function renderSpotzi(){
   const [txt,mood,topic,q]=LUMO[lumoToday()];
   const note=(S.notes||{})[TODAY];
@@ -1176,7 +1177,7 @@ function morningPush(){
   if(S.prefs.mshop&&S.list.length)body+='\nEinkauf: '+S.list.length+' Artikel ('+S.list.slice(0,3).map(i=>i.name).join(', ')+(S.list.length>3?' …':'')+')';
   {const td=(S.todos||[]).filter(t=>todoVisible(t)&&mine(t)&&!t.done&&t.due&&t.due<=TODAY);if(td.length)body+='\nTo-dos: '+td.map(t=>t.title).slice(0,3).join(', ')+(td.length>3?' …':'');}
   {const hc=(S.chores||[]).filter(c=>choreMine(c)&&c.due<=TODAY);if(hc.length)body+='\nHaushalt: '+hc.map(c=>c.title).join(', ');}
-  if(S.prefs.mquote&&S.prefs.lumo!==false)body+='\nSpotzi: '+LUMO[(dayOfYear()-1)%LUMO.length][0];
+  if(S.prefs.mquote&&S.prefs.lumo!==false)body+='\nSpotzi: '+LUMO[dayNo()%LUMO.length][0];
   pushRaw('Guten Morgen, '+USERS[S.user].name+'! Das steht heute an',body);
 }
 function push(ev,m){

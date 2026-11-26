@@ -165,8 +165,8 @@ let sayings: any[] | null = null;
 async function saying(today: string) {
   try {
     if (!sayings) sayings = await (await fetch(APP_URL + 'sayings.json')).json();
-    const doy = dayNum(today) - dayNum(`${Number(today.slice(0, 4)) - 1}-12-31`);
-    return sayings![(doy - 1) % sayings!.length]?.[0] || '';
+    // Laufender Tageszähler wie in der App (src/app.js dayNo), deckt auch mehr als 365 Sprüche ab
+    return sayings![dayNum(today) % sayings!.length]?.[0] || '';
   } catch (e) { return ''; }
 }
 const WATER_MSG = ['Zeit für ein Glas Wasser 💧', 'Spotzi hat Durst. Du vielleicht auch? 💧', 'Ein Schluck Wasser, ein tiefer Atemzug. 💧', 'Kleine Trinkpause gefällig? 💧', 'Dein Körper sagt Danke für ein Glas Wasser 💧'];
