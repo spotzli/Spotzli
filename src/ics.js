@@ -68,6 +68,28 @@ export function parseICS(text) {
   return out.filter((e) => e.start && e.status !== 'CANCELLED');
 }
 
+// Geburtstage erkennen: jährlich wiederholte Termine mit "Geburtstag", "Geburi", "Bday" … im Titel
+const BDAY_RE = /(?<![\p{L}])(geburtstag(?!s?(?:party|feier|fest|essen|brunch|apero|apéro))\p{L}*|geburi\p{L}*|geb\.?(?![\p{L}])|burzeltag\p{L}*|wiegenfest|b-?days?|birthdays?|birth day|cumpleaños|compleanno|anniversaire)(?![\p{L}])|🎂/iu;
+export function bdayInfo(title, rrule) {
+  if (!rrule || rrule.FREQ !== 'YEARLY' || +(rrule.INTERVAL || 1) !== 1) return null;
+  const t = String(title || '');
+  if (!BDAY_RE.test(t)) return null;
+  let year = null;
+  const ym = t.match(/(?:\(|\*\s?|geb\.?\s?|jg\.?\s?)((?:19|20)\d\d)\)?/i) || t.match(/\(((?:19|20)\d\d)\)/);
+  if (ym && +ym[1] <= new Date().getFullYear()) year = +ym[1];
+  const name = t
+    .replace(/\((?:19|20)\d\d\)|\*\s?(?:19|20)\d\d|(?:jg\.?\s?)(?:19|20)\d\d/gi, ' ')
+    .replace(new RegExp(BDAY_RE.source, 'giu'), ' ')
+    .replace(/(?<![\p{L}])(?:happy|alles gute|zum|von|vom|der|die|das|hat|feiert|wird|today|heute)(?![\p{L}])/giu, ' ')
+    .replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF\uFE0F]/gu, ' ')
+    .replace(/(\p{L})['’]s(?![\p{L}])/gu, '$1')
+    .replace(/['’](?![\p{L}])/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s\-–:,.!·|/]+|[\s\-–:,.!·|/]+$/g, '')
+    .trim();
+  return { name: name || t.trim() || 'Geburtstag', year };
+}
+
 const WD = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
 const keyOf = (dt) => dt.allday ? dt.date : String(dt.ts);
 const startDate = (s) => s.allday ? new Date(+s.date.slice(0, 4), +s.date.slice(5, 7) - 1, +s.date.slice(8, 10)) : new Date(s.ts);
@@ -79,6 +101,7 @@ export function expandICS(vevents, from, to, prefix) {
   const res = [];
   for (const e of vevents) {
     const s0 = startDate(e.start);
+    const bd = e.recid ? null : bdayInfo(e.title, e.rrule);
     let durMs;
     if (e.end) durMs = startDate(e.end) - s0;
     else if (e.dur) durMs = e.dur;
@@ -139,6 +162,7 @@ export function expandICS(vevents, from, to, prefix) {
         }
       } else push(s0);
     }
+    if (bd) { for (const d of occ) { if (d < fromD || d > toD) continue; const date = isoD(d); res.push({ id: `${prefix}:${e.uid || res.length}:${date}`, kind: 'bday', title: bd.name, year: bd.year, date, endDate: null, time: null, end: null, allday: true, repeat: 'none', rems: [], loc: e.loc || '', ext: true }); } continue; }
     for (const d of occ) {
       const endD = new Date(d.getTime() + durMs);
       if (endD < fromD && d < fromD) continue;
@@ -169,6 +193,8 @@ export function toSpotziEvents(vevents, fromDate) {
       else if (simple && r.FREQ === 'MONTHLY' && iv === 1 && !r.BYDAY) repeat = 'monthly';
       else if (r.FREQ === 'YEARLY' && iv === 1) repeat = 'yearly';
     }
+    const bd = bdayInfo(e.title, r);
+    if (bd) { out.push({ kind: 'bday', title: bd.name, year: bd.year, date: isoD(s0), endDate: null, time: null, end: null, allday: true, repeat: 'yearly', note: e.loc || '' }); continue; }
     if (repeat === 'none' && isoD(s0) < fromDate) continue;
     let durMs = e.end ? startDate(e.end) - s0 : e.dur || (e.start.allday ? 864e5 : 3600000);
     const endD = new Date(s0.getTime() + Math.max(0, durMs));

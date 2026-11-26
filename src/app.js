@@ -429,7 +429,7 @@ function renderHome(){
   <div class="rlist">${rems.slice(0,3).map(remRow).join('')||'<div class="empty">Keine Erinnerungen in den nächsten zwei Wochen.</div>'}</div>`:''}`;
 }
 function datesHtml(max,bare){const out=[];for(let i=0;i<=90&&out.length<max;i++){const d=addDays(TODAY,i);eventsOn(d).filter(ev=>ev.kind&&ev.kind!=='event').forEach(ev=>{if(out.length<max)out.push([ev,d,i])})}
-  const list=`<div class="card"><div class="agenda">${out.map(([ev,d,i])=>`<button class="ev" style="--cat:var(${CATS[ev.cat].v})" data-ev="${ev.id}" data-d="${d}"><div class="time">${i===0?'Heute':i===1?'Morgen':'in '+i+' T.'}<small>${fromIso(d).toLocaleDateString('de-DE',{day:'numeric',month:'short'})}</small></div><div style="min-width:0"><div class="t">${esc(T(ev,d))}</div><div class="meta">${ev.note?esc(ev.note):''}</div></div><div class="bell">🔔 ${ev.rems.length}</div></button>`).join('')}</div></div>`;
+  const list=`<div class="card"><div class="agenda">${out.map(([ev,d,i])=>`<button class="ev" style="--cat:var(${CATS[ev.cat].v})" data-ev="${ev.id}" data-d="${d}"><div class="time">${i===0?'Heute':i===1?'Morgen':'in '+i+' T.'}<small>${fromIso(d).toLocaleDateString('de-DE',{day:'numeric',month:'short'})}</small></div><div style="min-width:0"><div class="t">${esc(T(ev,d))}</div><div class="meta">${ev.note?esc(ev.note):''}</div></div>${ev.ext?'':`<div class="bell">🔔 ${ev.rems.length}</div>`}</button>`).join('')}</div></div>`;
   if(bare)return out.length?list:'<div class="empty">In den nächsten 90 Tagen keine Geburtstage oder Jahrestage.</div>';
   return out.length?`<div class="section-title">Geburtstage &amp; Jahrestage</div>${list}`:''}
 /* ---------- Laptop-Dashboard ---------- */
@@ -689,12 +689,13 @@ function openImport(){
   <div id="im-res"></div>`,sh=>{
     const $=q=>sh.querySelector(q);$('#im-pick').onclick=()=>$('#im-file').click();
     $('#im-file').onchange=async()=>{const fl=$('#im-file').files[0];if(!fl)return;try{found=toSpotziEvents(parseICS(await fl.text()),addDays(TODAY,-1))}catch(e){found=[]}
-      $('#im-res').innerHTML=found.length?`<p><b>${found.length} Termine gefunden</b> (ab heute, Wiederholungen bleiben erhalten).</p>
+      const nb=found.filter(x=>x.kind==='bday').length;
+      $('#im-res').innerHTML=found.length?`<p><b>${found.length} Termine gefunden</b> (ab heute, Wiederholungen bleiben erhalten).${nb?` Davon ${nb===1?'wird 1 als Geburtstag':'werden '+nb+' als Geburtstage'} eingetragen 🎂`:''}</p>
        <div class="field"><span class="lbl">Für wen</span><div class="catpick">${PICK[S.user].map(([k,l])=>`<button type="button" data-imc="${k}" style="--cat:var(${CATS[k].v})" aria-pressed="${k===cat}">${l}</button>`).join('')}</div></div>
        <div class="btns"><button class="btn primary" id="im-go">Importieren</button></div>`:'<p class="hint">Keine kommenden Termine in dieser Datei gefunden.</p>'};
     sh.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
       if(b.dataset.imc){cat=b.dataset.imc;sh.querySelectorAll('[data-imc]').forEach(x=>x.setAttribute('aria-pressed',x===b))}
-      if(b.id==='im-go'){for(const ev of found)S.events.push({id:uid(),kind:'event',cat,nag:0,by:S.user,rems:ev.allday?[]:[S.defRem],...ev});save();closeSheet();render();toast(found.length+' Termine importiert')}});
+      if(b.id==='im-go'){for(const ev of found)S.events.push({id:uid(),kind:'event',cat,nag:0,by:S.user,rems:ev.kind==='bday'?[10080,0]:ev.allday?[]:[S.defRem],...ev});save();closeSheet();render();toast(found.length+' Termine importiert')}});
   });
 }
 /* ---------- Spotzi im Apple Kalender (Abo-Link) ---------- */
@@ -913,10 +914,10 @@ function swipeClose(sh){
 function openDetail(id,d){
   const ev=S.events.find(x=>x.id===id)||extEvents().find(x=>x.id===id);if(!ev)return;
   if(ev.ext){const c=CATS[ev.cat]||{label:'Kalender',v:'--muted',sym:''};
-    openSheet(`<h3>${esc(ev.title)}</h3><dl class="kv"><dt>Wann</dt><dd>${ev.endDate?fmtDay(ev.date)+(ev.allday?'':', '+ev.time+' Uhr')+' bis '+fmtDay(ev.endDate)+(ev.allday?'':', '+ev.end+' Uhr'):fmtDay(ev.date)+(ev.allday?', ganztägig':', '+ev.time+(ev.end?'–'+ev.end:'')+' Uhr')}</dd>
+    openSheet(`<h3>${esc(T(ev,d))}</h3><dl class="kv"><dt>Wann</dt><dd>${ev.endDate?fmtDay(ev.date)+(ev.allday?'':', '+ev.time+' Uhr')+' bis '+fmtDay(ev.endDate)+(ev.allday?'':', '+ev.end+' Uhr'):fmtDay(ev.date)+(ev.allday?', ganztägig':', '+ev.time+(ev.end?'–'+ev.end:'')+' Uhr')}</dd>
      <dt>Kalender</dt><dd><span class="tag" style="--cat:var(${c.v})">📅 ${esc(c.label)}</span></dd>${ev.loc?`<dt>Ort</dt><dd>${esc(ev.loc)}</dd>`:''}<dt>Sichtbar für</dt><dd>${c.owner==='both'?USERS.sevi.name+' und '+USERS.sie.name:'Nur dich'}</dd></dl>
      <p class="hint">Abonnierter Termin, nur zum Ansehen. Ändern kannst du ihn im ursprünglichen Kalender.</p>
-     <div class="btns">${FEAT().countdown?'<button class="btn" id="mkcd">⏳ Countdown</button>':''}<button class="btn primary" id="ok">Fertig</button></div>`,s=>{s.querySelector('#ok').onclick=closeSheet;const m=s.querySelector('#mkcd');if(m)m.onclick=()=>openCountdown(null,{title:ev.title,date:ev.date,vis:c.owner==='both'?'shared':'private'})});return}
+     <div class="btns">${FEAT().countdown?'<button class="btn" id="mkcd">⏳ Countdown</button>':''}<button class="btn primary" id="ok">Fertig</button></div>`,s=>{s.querySelector('#ok').onclick=closeSheet;const m=s.querySelector('#mkcd');if(m)m.onclick=()=>openCountdown(null,{title:ev.title,date:ev.date,icon:ev.kind==='bday'?'🎂':'⏳',vis:c.owner==='both'?'shared':'private'})});return}
   const c=CATS[ev.cat];const st=startOf(ev,startOfOcc(ev,d));
   const rems=[...ev.rems].sort((a,b)=>b-a).map(m=>`<div class="rem"><span>${remLabel(m)}</span><small>${fmtShort(new Date(st-m*6e4))}</small></div>`).join('')||'<div class="who">Keine Erinnerung</div>';
   openSheet(`<h3>${esc(T(ev,d))}</h3>
