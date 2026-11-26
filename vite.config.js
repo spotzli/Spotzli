@@ -32,6 +32,8 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
         navigateFallback: base + 'index.html',
+        // Installationsseite und iPhone-Profil nicht durch die App ersetzen
+        navigateFallbackDenylist: [/\.mobileconfig$/, /installieren\.html$/],
         importScripts: ['push-sw.js'],
         runtimeCaching: [
           {

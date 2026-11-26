@@ -505,3 +505,7 @@ body[data-season]:not([data-season=""]) .hero::after{background:var(--season-b);
 /* Text nicht markierbar (wie eine native App); Eingabefelder bleiben normal */
 body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea,select,[contenteditable="true"]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+.tpick{display:flex;align-items:center;gap:4px;width:100%}
+.tpick select.inp{flex:1 1 0;max-width:none;padding-inline:8px;text-align:center;text-align-last:center;font-variant-numeric:tabular-nums}
+.tpick select.inp:disabled{opacity:.45}
+.tpick b{font-weight:700;color:var(--muted,#888)}

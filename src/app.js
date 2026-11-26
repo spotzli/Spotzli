@@ -28,6 +28,22 @@ const dayNum=s=>{const[y,m,d]=s.split('-').map(Number);return Date.UTC(y,m-1,d)/
 const TODAY=iso(new Date());
 const toMin=t=>{const[h,m]=t.split(':').map(Number);return h*60+m};
 const fromMin=n=>{n=Math.max(0,Math.min(n,23*60+59));return pad(Math.floor(n/60))+':'+pad(n%60)};
+
+// Uhrzeit-Auswahl in festen Schritten (iOS ignoriert step bei <input type="time">):
+// zwei Auswahllisten (Stunde/Minute) plus verstecktes Feld mit der id, das wie ein normales Zeitfeld gelesen wird.
+// Eine bestehende Zeit ausserhalb des Rasters (z. B. aus einem Import) bleibt als zusätzliche Option erhalten.
+function tpick(id,v,step,o={}){
+  if(!v&&!o.optional)v=o.def||'12:00';
+  const m=/^(\d\d):(\d\d)/.exec(v||'');const hh=m?m[1]:'',mm=m?m[2]:'';
+  const mins=[];for(let i=0;i<60;i+=step)mins.push(pad(i));if(mm&&!mins.includes(mm)){mins.push(mm);mins.sort()}
+  const hs=(o.optional?'<option value="">–</option>':'')+[...Array(24)].map((_,i)=>`<option${pad(i)===hh?' selected':''}>${pad(i)}</option>`).join('');
+  const ms=mins.map(x=>`<option${x===(mm||'00')?' selected':''}>${x}</option>`).join('');
+  return `<span class="tpick"${o.style?` style="${o.style}"`:''}><select class="inp" id="${id}-h" aria-label="${o.label?o.label+', ':''}Stunde">${hs}</select><b aria-hidden="true">:</b><select class="inp" id="${id}-m" aria-label="${o.label?o.label+', ':''}Minute"${o.optional&&!hh?' disabled':''}>${ms}</select><input type="hidden" id="${id}" value="${m?hh+':'+mm:''}"></span>`}
+function setTpick(inp,v){inp.value=v||'';const w=inp.closest('.tpick');if(!w)return;const[h,m]=(v||'').split(':');const hs=w.querySelector('select[id$="-h"]'),ms=w.querySelector('select[id$="-m"]');
+  hs.value=h||'';if(m&&![...ms.options].some(x=>x.value===m)){ms.add(new Option(m,m));[...ms.options].sort((a,b)=>a.value<b.value?-1:1).forEach(x=>ms.add(x))}ms.value=m||ms.options[0].value;ms.disabled=!h&&hs.querySelector('option[value=""]')!==null}
+document.addEventListener('change',e=>{const w=e.target.closest&&e.target.closest('.tpick');if(!w||e.target.tagName!=='SELECT')return;
+  const hs=w.querySelector('select[id$="-h"]'),ms=w.querySelector('select[id$="-m"]'),inp=w.querySelector('input[type=hidden]');
+  ms.disabled=!hs.value;inp.value=hs.value?hs.value+':'+ms.value:'';inp.dispatchEvent(new Event('change',{bubbles:true}))},true);
 function isoWeek(s){const d=fromIso(s);d.setHours(12);d.setDate(d.getDate()+3-(d.getDay()+6)%7);const w1=new Date(d.getFullYear(),0,4,12);return 1+Math.round(((d-w1)/864e5-3+(w1.getDay()+6)%7)/7)}
 function T(ev,d){const y=fromIso(d||ev.date).getFullYear();
   if(ev.kind==='bday')return '🎂 '+ev.title+(ev.year?' wird '+(y-ev.year):'');
@@ -105,7 +121,7 @@ function openChore(c,tpl){
   <div class="field"><span class="lbl">Wer macht es?</span><div class="seg vseg" id="c-ass">${seg('cass',[['alt','Abwechselnd'],['sevi',USERS.sevi.name],['sie',USERS.sie.name],['both','Beide']],f.assign)}</div></div>
   <div class="field"><label for="c-due">Nächstes Mal fällig</label><input type="date" class="inp" id="c-due" value="${f.due}"></div>
   <div class="setting"><div><span>Erinnerung am Fälligkeitstag</span></div><button type="button" class="switch" role="switch" id="c-rem" aria-checked="${f.remind}" aria-label="Erinnerung"></button></div>
-  <div class="field" id="c-rtwrap"><label for="c-rtime">um</label><input type="time" class="inp" id="c-rtime" value="${f.rtime}"></div>
+  <div class="field" id="c-rtwrap"><label for="c-rtime-h">um</label>${tpick('c-rtime',f.rtime,5,{def:'18:00'})}</div>
   <div class="btns">${isNew?'':'<button class="btn danger" id="c-del">Löschen</button>'}<button class="btn primary" id="c-save">Speichern</button></div>`,sh=>{
     const $=q=>sh.querySelector(q);
     const drawR=()=>{$('#c-rem').setAttribute('aria-checked',f.remind);$('#c-rtwrap').hidden=!f.remind};drawR();
@@ -131,7 +147,7 @@ function remPresets(withDue){const late=nowHM()>='17:30';const tom=addDays(TODAY
 function remAtLabel(t){if(t.remind==='morning')return 'Morgen-Übersicht';if(t.remind===0&&!t.remindAt)return 'Zur Fälligkeit';if(!t.remindAt)return '';const[d,tm]=t.remindAt.split('T');return dueLabel(d)+' '+tm}
 function remChooser(t,withDue){const cur=t.remindAt?'custom':t.remind==='morning'?'morning':t.remind===0?'due':'none';
   return `<div class="remask"><div class="chips">${remPresets(withDue).map(([k,l])=>`<button type="button" class="chip" data-rset="${k}" aria-pressed="${k===cur}">${l}</button>`).join('')}</div>
-  <div class="row" id="r-custom" ${cur==='custom'?'':'hidden'}><input type="date" class="inp" id="r-d" value="${t.remindAt?t.remindAt.split('T')[0]:(t.due||TODAY)}"><input type="time" class="inp" id="r-t" value="${t.remindAt?t.remindAt.split('T')[1]:(t.time||'09:00')}"></div></div>`}
+  <div class="row" id="r-custom" ${cur==='custom'?'':'hidden'}><input type="date" class="inp" id="r-d" value="${t.remindAt?t.remindAt.split('T')[0]:(t.due||TODAY)}">${tpick('r-t',t.remindAt?t.remindAt.split('T')[1]:(t.time||'09:00'),5,{label:'Erinnerung'})}</div></div>`}
 function bindRemChooser(root,t,onPick){
   root.querySelector('.remask').addEventListener('click',e=>{const b=e.target.closest('[data-rset]');if(!b)return;const k=b.dataset.rset;const p=remPresets(true).find(x=>x[0]===k);
     root.querySelectorAll('[data-rset]').forEach(x=>x.setAttribute('aria-pressed',x===b));root.querySelector('#r-custom').hidden=k!=='custom';
@@ -205,7 +221,7 @@ function openHabit(h,tpl){
   <div class="field"><span class="lbl">Wie oft?</span><div class="seg vseg" id="h-freq"><button type="button" data-hfreq="daily" aria-pressed="${f.freq==='daily'}">Täglich</button><button type="button" data-hfreq="weekly" aria-pressed="${f.freq==='weekly'}">Pro Woche</button></div>
    <div class="row" id="h-tw" style="margin-top:8px;align-items:center"><input type="number" min="1" max="7" class="inp" id="h-target" value="${f.target||3}" style="max-width:90px" aria-label="Wie oft pro Woche"><span>mal pro Woche</span></div></div>
   <div class="setting"><span>Erinnerung</span><button type="button" class="switch" role="switch" id="h-rem" aria-checked="${f.remind}" aria-label="Erinnerung"></button></div>
-  <div id="h-rw"><div class="field"><label for="h-rtime">um</label><input type="time" class="inp" id="h-rtime" value="${f.rtime}"></div>
+  <div id="h-rw"><div class="field"><label for="h-rtime-h">um</label>${tpick('h-rtime',f.rtime,5,{def:'19:00'})}</div>
    <div class="field"><span class="lbl">an diesen Tagen</span><div class="wdpick" id="h-days">${[1,2,3,4,5,6,0].map(d=>`<button type="button" data-hday="${d}" aria-pressed="${f.rdays.includes(d)}">${WD[d]}</button>`).join('')}</div><p class="hint" style="margin:6px 0 0">Spotzi erinnert nur, wenn du den Habit an dem Tag noch nicht abgehakt hast.</p></div></div>
   <div class="btns">${isNew?'':'<button class="btn danger" id="h-del">Löschen</button>'}<button class="btn primary" id="h-save">Speichern</button></div>`,sh=>{
     const $=q=>sh.querySelector(q);
@@ -248,7 +264,7 @@ function openTodo(t){
   const segBtns=(name,opts,val)=>opts.map(([k,l])=>`<button type="button" data-${name}="${k}" aria-pressed="${val===k}">${l}</button>`).join('');
   openSheet(`<h3>${isNew?'Neues To-do':'To-do bearbeiten'}</h3>
   <div class="field"><label for="t-title">Was ist zu tun?</label><input class="inp" id="t-title" value="${esc(f.title)}" placeholder="z. B. Müll rausbringen"></div>
-  <div class="field"><div class="row"><div><label class="lbl" for="t-due">Fällig am (optional)</label><input type="date" class="inp" id="t-due" value="${f.due||''}"></div><div><label class="lbl" for="t-time">Uhrzeit</label><input type="time" class="inp" id="t-time" value="${f.time||''}"></div></div></div>
+  <div class="field"><div class="row"><div><label class="lbl" for="t-due">Fällig am (optional)</label><input type="date" class="inp" id="t-due" value="${f.due||''}"></div><div><label class="lbl" for="t-time-h">Uhrzeit</label>${tpick('t-time',f.time||'',5,{optional:true})}</div></div></div>
   <div class="field"><span class="lbl">Soll ich dich erinnern?</span>${remChooser(f,true)}<p class="hint" id="t-duehint" style="margin:6px 0 0" hidden>„Zur Fälligkeit“ braucht ein Fälligkeitsdatum (ohne Uhrzeit um 9:00).</p></div>
   <div class="field"><label for="t-rep">Wiederholen</label><select class="inp" id="t-rep">${Object.entries(TREP).map(([k,l])=>`<option value="${k}"${f.repeat===k?' selected':''}>${l}</option>`).join('')}</select></div>
   <div class="field"><label for="t-note">Notiz</label><textarea class="inp" id="t-note" rows="2" placeholder="Optional">${esc(f.note)}</textarea></div>
@@ -357,7 +373,7 @@ function startsOn(ev,d){
 function visible(ev){
   const o=CATS[ev.cat].owner;
   if(o!==S.user&&o!=='both')return false;
-  if(S.filter==='privat')return o===S.user;
+  if(S.filter==='privat')return o===S.user||o==='both';
   if(S.filter==='gemeinsam')return o==='both';
   return true;
 }
@@ -750,12 +766,12 @@ function renderRem(){setTimeout(refreshPush,0);
    <div class="section-title">Wasser trinken</div>
    <div class="card"><div class="setting"><div><b>Spotzi erinnert ans Trinken</b><div class="hint" style="margin:0">Mit Gläser-Zähler auf der Startseite</div></div><button class="switch" role="switch" data-wpref="on" aria-checked="${!!W.on}" aria-label="Wasser-Erinnerung"></button></div>
     <div ${W.on?'':'hidden'}><div class="setting"><label for="w-every">Wie oft</label><select class="inp" id="w-every" style="max-width:55%">${[[30,'Alle 30 Min'],[60,'Jede Stunde'],[90,'Alle 1,5 Std'],[120,'Alle 2 Std'],[180,'Alle 3 Std']].map(([v,l])=>`<option value="${v}"${W.every===v?' selected':''}>${l}</option>`).join('')}</select></div>
-    <div class="setting"><span>Zeitfenster</span><span class="row" style="max-width:60%"><input type="time" class="inp" id="w-from" value="${W.from}" aria-label="Von"><input type="time" class="inp" id="w-to" value="${W.to}" aria-label="Bis"></span></div>
+    <div class="setting"><label for="w-from-h">Ab</label>${tpick('w-from',W.from,5,{label:'Ab',style:'max-width:170px'})}</div><div class="setting"><label for="w-to-h">Bis</label>${tpick('w-to',W.to,5,{label:'Bis',style:'max-width:170px'})}</div>
     <div class="setting"><label for="w-goal">Tagesziel</label><select class="inp" id="w-goal" style="max-width:55%">${[4,5,6,7,8,9,10,12].map(v=>`<option value="${v}"${W.goal===v?' selected':''}>${v} Gläser</option>`).join('')}</select></div>
     <p class="hint" style="margin:6px 2px 2px">Hast du dein Tagesziel erreicht, ist Spotzi für heute still.</p></div></div>
    <div class="section-title">Morgen-Übersicht</div>
    <div class="card"><div class="setting"><div><b>„Was steht heute an?“</b><div class="hint" style="margin:0">Jeden Morgen eine Push mit allen Terminen des Tages</div></div>${sw('morning',P.morning,'Morgen-Übersicht')}</div>
-    <div class="setting"><label for="mtime"><b>Uhrzeit</b></label><input type="time" class="inp" id="mtime" value="${P.mtime}" style="max-width:130px"></div>
+    <div class="setting"><label for="mtime-h"><b>Uhrzeit</b></label>${tpick('mtime',P.mtime,5,{style:'max-width:170px'})}</div>
     <div class="setting"><span>Einkaufsliste mit anzeigen</span>${sw('mshop',P.mshop,'Einkaufsliste mit anzeigen')}</div>
     <div class="setting"><span>Spruch von Spotzi mitsenden</span>${sw('mquote',P.mquote,'Spruch von Spotzi')}</div>
     <div class="setting"><span>Auch am Wochenende</span>${sw('mweekend',P.mweekend,'Auch am Wochenende')}</div>
@@ -947,7 +963,7 @@ function openForm(ev,preset){
   <div class="seg vseg" id="f-kind" role="group" aria-label="Art">${[['event','Termin'],['bday','Geburtstag'],['anniv','Jahrestag']].map(([k,l])=>`<button type="button" data-kind="${k}" aria-pressed="${(f.kind||'event')===k}">${l}</button>`).join('')}</div>
   <div class="field"><label for="f-title" id="f-title-l">Titel</label><input class="inp" id="f-title" placeholder="Neuer Termin" value="${esc(f.title)}"></div>
   <div class="field"><span class="lbl">Für wen</span><div class="catpick" id="f-cat">${picks.map(([k,l])=>`<button type="button" data-cat="${k}" style="--cat:var(${CATS[k].v})" aria-pressed="${f.cat===k}">${l}</button>`).join('')}</div></div>
-  <div class="field"><div class="row"><div><label class="lbl" for="f-date">Von</label><input type="date" class="inp" id="f-date" value="${f.date}"></div><div id="f-endwrap"><label class="lbl" for="f-edate">Bis</label><input type="date" class="inp" id="f-edate" value="${f.endDate||f.date}" min="${f.date}"></div></div><div class="row" id="timewrap"><div><label class="lbl" for="f-time">Beginn</label><input type="time" class="inp" id="f-time" value="${f.time}"></div><div><label class="lbl" for="f-end">Ende</label><input type="time" class="inp" id="f-end" value="${f.end}"></div></div>
+  <div class="field"><div class="row"><div><label class="lbl" for="f-date">Von</label><input type="date" class="inp" id="f-date" value="${f.date}"></div><div id="f-endwrap"><label class="lbl" for="f-edate">Bis</label><input type="date" class="inp" id="f-edate" value="${f.endDate||f.date}" min="${f.date}"></div></div><div class="row" id="timewrap"><div><label class="lbl" for="f-time-h">Beginn</label>${tpick('f-time',f.time,15)}</div><div><label class="lbl" for="f-end-h">Ende</label>${tpick('f-end',f.end,15)}</div></div>
   <label class="check" id="f-alldaywrap"><input type="checkbox" id="f-allday" ${f.allday?'checked':''}> Ganztägig (Erinnerung bezieht sich auf 9:00 Uhr)</label></div>
   <div class="field" id="f-yearwrap"><label for="f-year" id="f-year-l">Geburtsjahr (optional)</label><input type="number" class="inp" id="f-year" inputmode="numeric" placeholder="z. B. 1990" value="${f.year||''}"></div>
   <div class="field" id="f-repwrap"><label for="f-rep">Termin wiederholen</label><select class="inp" id="f-rep">${Object.entries(REPEAT).map(([k,l])=>`<option value="${k}"${f.repeat===k?' selected':''}>${l}</option>`).join('')}</select></div>
@@ -980,7 +996,7 @@ function openForm(ev,preset){
     $('#f-cat').onclick=e=>{const b=e.target.closest('[data-cat]');if(!b)return;f.cat=b.dataset.cat;s.querySelectorAll('[data-cat]').forEach(x=>x.setAttribute('aria-pressed',x===b));drawWho()};
     $('#f-allday').onchange=drawAll;
     let lastDate=f.date;$('#f-date').onchange=e=>{const v=e.target.value;if(!v)return;const ed=$('#f-edate');const span=ed.value&&ed.value>lastDate?dayNum(ed.value)-dayNum(lastDate):0;ed.min=v;ed.value=addDays(v,span);lastDate=v};
-    let lastStart=f.time;$('#f-time').onchange=e=>{const v=e.target.value;if(!v)return;const dur=toMin($('#f-end').value||fromMin(toMin(lastStart)+S.prefs.defDur))-toMin(lastStart);$('#f-end').value=fromMin(toMin(v)+(dur>0?dur:S.prefs.defDur));lastStart=v};
+    let lastStart=f.time;$('#f-time').onchange=e=>{const v=e.target.value;if(!v)return;const dur=toMin($('#f-end').value||fromMin(toMin(lastStart)+S.prefs.defDur))-toMin(lastStart);setTpick($('#f-end'),fromMin(toMin(v)+(dur>0?dur:S.prefs.defDur)));lastStart=v};
     $('#f-rems').onclick=e=>{const b=e.target.closest('[data-rm]');if(b){f.rems=f.rems.filter(m=>m!==+b.dataset.rm);drawRems()}};
     $('#f-preset').onchange=e=>{const v=e.target.value;if(v==='custom'){$('#customrow').hidden=false}else if(v!==''){f.rems.push(+v);drawRems()}e.target.value=''};
     $('#f-cadd').onclick=()=>{const n=Math.max(1,parseInt($('#f-cn').value)||1);f.rems.push(n*+$('#f-cu').value);drawRems();$('#customrow').hidden=true};
