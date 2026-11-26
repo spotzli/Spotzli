@@ -241,8 +241,6 @@
 			hRIHhVwocVDIhRIHhVwocVDIhRIHhVwocVDIhRIHhVz+DwAA//+V
 			ljYeAAAABklEQVQDAA9b1z/298SMAAAAAElFTkSuQmCC
 			</data>
-			<key>IgnoreManifestScope</key>
-			<false/>
 			<key>IsRemovable</key>
 			<true/>
 			<key>Label</key>
@@ -266,7 +264,7 @@
 		</dict>
 	</array>
 	<key>PayloadDescription</key>
-	<string>Installiert die App Spotzi auf dem Home-Bildschirm. Das Profil ändert sonst nichts am iPhone und lässt sich jederzeit unter Einstellungen &gt; Allgemein &gt; VPN und Geräteverwaltung wieder entfernen.</string>
+	<string>Jetzt oben rechts auf „Installieren“ tippen, den iPhone-Code eingeben und noch zweimal „Installieren“ bestätigen. Danach liegt Spotzi auf dem Home-Bildschirm. Das Profil ändert sonst nichts und lässt sich unter Einstellungen &gt; Allgemein &gt; VPN und Geräteverwaltung wieder entfernen.</string>
 	<key>PayloadDisplayName</key>
 	<string>Spotzi</string>
 	<key>PayloadIdentifier</key>
