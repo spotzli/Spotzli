@@ -6,6 +6,9 @@
 <title>Spotzi installieren</title>
 <meta name="robots" content="noindex">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Spotzi">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <style>
 :root{--bg:#F3F5FA;--card:#fff;--ink:#1A1E2E;--muted:#5C637A;--acc:#4C5BD4;--line:#E2E6F0;--hl:#FF9F0A}
@@ -32,7 +35,7 @@ b{font-weight:650;color:var(--ink)}
 .ios{background:#1C1C1E;color:#fff;border-radius:18px;padding:12px;font:14px/1.35 -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.18)}
 .ios .bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .ios .x{width:28px;height:28px;border-radius:50%;background:#2C2C2E;display:grid;place-items:center;color:#aaa;font-size:15px}
-.ios .t{font-weight:700}
+.ios .t{font-weight:700;flex:1;text-align:center;font-size:13px;padding:0 6px}
 .ios .pill{background:#0A84FF;color:#fff;font-weight:600;border-radius:999px;padding:5px 12px}
 .ios .grp{background:#2C2C2E;border-radius:12px;padding:10px 12px}
 .ios .row{display:flex;align-items:center;gap:10px}
@@ -58,78 +61,74 @@ span.hl{border-radius:8px}
 .home div{width:44px;height:44px;border-radius:11px;background:#3A3A3C}
 .home img{width:44px;height:44px;border-radius:11px}
 .home .lbl{grid-column:1/-1;font-size:12px;color:#98989D}
+.sharebar{display:flex;justify-content:space-around;align-items:center;padding:6px 0 2px;color:#0A84FF;font-size:20px}
+.list .row{padding:9px 2px;border-top:1px solid #3A3A3C}.list .row:first-child{border-top:0}
+details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:24px 0 0}
+summary{font-weight:650;cursor:pointer}
+.note.ok{display:none;border-color:#30D158}
+.or{font-size:13px;color:var(--muted);margin-top:6px}
 </style>
 </head>
 <body>
 <main>
-  <div class="hero"><img src="apple-touch-icon.png" alt=""><h1>Spotzi aufs iPhone</h1><p class="sub">Dauert etwa eine Minute. Diese Seite offen lassen und Schritt für Schritt folgen.</p></div>
+  <div class="hero"><img src="apple-touch-icon.png" alt=""><h1>Spotzi aufs iPhone</h1><p class="sub">Drei Tipps, keine Einstellungen nötig.</p></div>
 
-  <p class="note warn" id="not-safari"><b>Bitte zuerst in Safari öffnen.</b> Hier geht es nicht. Tippe auf ••• oder das Teilen-Symbol und wähle „In Safari öffnen“. Oder den Link kopieren und in Safari einfügen.</p>
+  <p class="note warn" id="not-safari"><b>Bitte zuerst in Safari öffnen.</b> Aus WhatsApp, Instagram oder Chrome heraus geht es nicht. Tippe auf ••• oder das Teilen-Symbol und wähle „In Safari öffnen“. Oder den Link kopieren und in Safari einfügen.</p>
+  <p class="note ok" id="installed"><b>Spotzi ist schon installiert.</b> Öffne es einfach über das Symbol auf dem Home-Bildschirm.</p>
 
   <section class="step"><div class="num">1</div><div>
-    <h2>Hier tippen</h2>
-    <a class="btn" href="spotzi.mobileconfig">Spotzi installieren</a>
+    <h2>Unten auf das Teilen-Symbol tippen</h2>
+    <p>Das Viereck mit dem Pfeil nach oben, in der Leiste von Safari.</p>
+    <div class="ios"><div class="sharebar"><span>‹</span><span>›</span><span class="hl" style="padding:0 8px;border-radius:8px"><svg width="20" height="24" viewBox="0 0 20 24" fill="none" stroke="#0A84FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Teilen"><path d="M10 15V2M5 6l5-5 5 5"/><path d="M6 10H3v12h14V10h-3"/></svg></span><span>📖</span><span>⧉</span></div></div>
+    <p class="or">Kein Teilen-Symbol zu sehen? Unten auf ••• tippen, dann „Teilen“.</p>
   </div></section>
 
   <section class="step"><div class="num">2</div><div>
-    <h2>„Erlauben“ tippen</h2>
-    <p>Safari fragt, ob ein Profil geladen werden darf.</p>
-    <div class="ios"><div class="alert"><b>Diese Website versucht, ein Konfigurationsprofil zu laden.</b><div class="dim" style="margin-top:4px">Möchtest du dies erlauben?</div><div class="btns"><span>Ignorieren</span><span><span class="hl" style="padding:2px 6px">Erlauben</span></span></div></div></div>
+    <h2>„Zum Home-Bildschirm“ wählen</h2>
+    <p>Etwas nach unten wischen, falls es nicht gleich zu sehen ist.</p>
+    <div class="ios"><div class="grp list">
+      <div class="row"><span>Kopieren</span><span class="chev">⧉</span></div>
+      <div class="row"><span>Zur Leseliste hinzufügen</span><span class="chev">👓</span></div>
+      <div class="row"><span class="hl" style="padding:2px 6px">Zum Home-Bildschirm</span><span class="chev">⊞</span></div>
+      <div class="row"><span>Lesezeichen hinzufügen</span><span class="chev">📖</span></div></div></div>
   </div></section>
 
   <section class="step"><div class="num">3</div><div>
-    <h2>„Schließen“ tippen</h2>
-    <p>Das Profil ist jetzt nur <b>geladen</b>, noch nicht installiert. Es geht in den Einstellungen weiter.</p>
-    <div class="ios"><div class="alert"><b>Profil geladen</b><div class="dim" style="margin-top:4px">Überprüfe das Profil in der App „Einstellungen“, wenn du es installieren möchtest.</div><div class="one"><span class="hl" style="padding:2px 6px">Schließen</span></div></div></div>
+    <h2>Oben rechts „Hinzufügen“ tippen</h2>
+    <p>„Als Web-App öffnen“ eingeschaltet lassen, falls der Schalter angezeigt wird.</p>
+    <div class="ios"><div class="bar"><span class="dim">Abbrechen</span><span class="t">Zum Home-Bildschirm</span><span class="hl" style="color:#0A84FF;font-weight:600;padding:2px 6px">Hinzufügen</span></div>
+      <div class="grp"><div class="row"><img src="apple-touch-icon.png" alt="" style="width:40px;height:40px;border-radius:9px"><div>Spotzi<div class="dim" style="font-size:12px">spotzli.github.io</div></div></div></div></div>
   </div></section>
 
-  <section class="step"><div class="num">4</div><div>
-    <h2>Einstellungen öffnen, oben „Profil geladen“ tippen</h2>
-    <p>Die graue Zahnrad-App öffnen. Der Eintrag steht ganz oben, direkt unter deinem Namen.</p>
-    <div class="ios"><div class="grp"><div class="row"><div class="ico" style="border-radius:50%">👤</div><div>Dein Name<div class="dim" style="font-size:12px">Apple-Account, iCloud und mehr</div></div></div></div>
-      <div class="grp" style="margin-top:8px"><div class="row"><span class="hl" style="padding:2px 6px">Profil geladen</span><span class="chev">›</span></div></div></div>
-    <p style="margin-top:8px;font-size:13px">Steht es nicht da? Einstellungen › Allgemein › VPN und Geräteverwaltung › Spotzi.</p>
-  </div></section>
-
-  <section class="step key"><div class="num">5</div><div>
-    <h2>Oben rechts „Installieren“ tippen</h2>
-    <p>Diesen Schritt übersieht man leicht. Ohne ihn erscheint Spotzi <b>nicht</b> auf dem Home-Bildschirm.</p>
-    <div class="ios"><div class="bar"><span class="x">✕</span><span class="t">Profil</span><span class="pill hl">Installieren</span></div>
-      <div class="grp"><div class="row"><div class="ico">⚙️</div><div>Spotzi<div class="dim">Spotzi</div></div></div>
-      <div style="margin-top:8px"><span class="dim">Signiert von</span> <span class="red">Nicht signiert</span></div><div><span class="dim">Enthält</span> Web-Clip</div></div></div>
-    <p style="margin-top:8px;font-size:13px">„Nicht signiert“ ist normal: Spotzi ist eine private App und nicht bei Apple registriert.</p>
-  </div></section>
-
-  <section class="step"><div class="num">6</div><div>
-    <h2>iPhone-Code eingeben</h2>
-    <p>Derselbe Code wie zum Entsperren.</p>
-    <div class="ios" style="text-align:center"><b>Code eingeben</b><div class="dots"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
-  </div></section>
-
-  <section class="step key"><div class="num">7</div><div>
-    <h2>Noch zweimal „Installieren“</h2>
-    <p>Zuerst wieder oben rechts, dann unten im Fenster bestätigen.</p>
-    <div class="ios"><div class="bar"><span class="x" style="visibility:hidden">✕</span><span class="t">Warnung</span><span class="pill hl">Installieren</span></div>
-      <div class="dim" style="font-size:12px">Das Profil ist nicht signiert.</div>
-      <div class="sheet">Profil installieren?<div class="go"><span class="hl" style="padding:2px 8px">Installieren</span></div></div></div>
-  </div></section>
-
-  <section class="step"><div class="num">8</div><div>
-    <h2>„Fertig“ tippen</h2>
-    <p>Spotzi liegt jetzt auf dem Home-Bildschirm, meistens auf der letzten Seite.</p>
+  <section class="step"><div class="num">✓</div><div>
+    <h2>Fertig</h2>
+    <p>Spotzi liegt jetzt auf dem Home-Bildschirm und öffnet sich wie eine App, ohne Safari-Leisten.</p>
     <div class="ios"><div class="home"><div></div><div></div><div></div><img src="apple-touch-icon.png" alt="Spotzi"><span class="lbl" style="text-align:right;width:100%">Spotzi ↑</span></div></div>
   </div></section>
 
-  <div class="note"><b>Nicht zu finden?</b> Auf dem Home-Bildschirm nach unten wischen und „Spotzi“ suchen. Oder ganz nach rechts in die App-Mediathek wischen. Falls bei Einstellungen › Home-Bildschirm & App-Mediathek „Nur App-Mediathek“ gewählt ist, auf „Zum Home-Bildschirm hinzufügen“ stellen.</div>
-  <div class="note"><b>Datei landet in „Downloads“?</b> Die App Dateien öffnen, unter Downloads auf spotzi.mobileconfig tippen, dann weiter bei Schritt 4.</div>
-  <div class="note"><b>Wieder entfernen:</b> Einstellungen › Allgemein › VPN und Geräteverwaltung › Spotzi › Profil entfernen. Das Profil ändert sonst nichts am iPhone.</div>
+  <div class="note"><b>Nicht zu finden?</b> Auf dem Home-Bildschirm nach unten wischen und „Spotzi“ suchen, oder ganz nach rechts in die App-Mediathek wischen.</div>
+
+  <details>
+    <summary>Alternative: als Profil installieren</summary>
+    <p class="hint" style="color:var(--muted);font-size:14px">Mehr Schritte, aber nützlich, wenn man Spotzi für jemand anderen einrichtet.</p>
+    <a class="btn" href="spotzi.mobileconfig" style="font-size:16px;padding:12px">Profil laden</a>
+    <ol style="padding-left:20px;font-size:15px;color:var(--muted)">
+      <li>„Erlauben“ tippen, dann „Schließen“.</li>
+      <li>Einstellungen öffnen und ganz oben auf <b>Profil geladen</b> tippen.</li>
+      <li>Oben rechts <b>Installieren</b> tippen. Diesen Schritt übersieht man leicht.</li>
+      <li>iPhone-Code eingeben und noch zweimal <b>Installieren</b> bestätigen.</li>
+    </ol>
+    <p style="font-size:13px;color:var(--muted);margin:0">„Nicht signiert“ ist normal, weil Spotzi eine private App ist. Entfernen: Einstellungen › Allgemein › VPN und Geräteverwaltung › Spotzi.</p>
+  </details>
 
   <a class="btn sec" href="./">Ohne Installation im Browser öffnen</a>
 </main>
 <script>
 // In-App-Browser (WhatsApp, Instagram, Chrome …) können keine Profile laden
 var ua=navigator.userAgent;
-if(/iPhone|iPad|iPod/.test(ua)&&(/CriOS|FxiOS|EdgiOS|FBAN|FBAV|Instagram|WhatsApp|Line\//.test(ua)||!/Safari\//.test(ua)))document.getElementById('not-safari').style.display='block';
+var standalone=navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
+if(standalone){document.getElementById('installed').style.display='block';location.replace('./')}
+else if(/iPhone|iPad|iPod/.test(ua)&&(/CriOS|FxiOS|EdgiOS|FBAN|FBAV|Instagram|WhatsApp|Line\//.test(ua)||!/Safari\//.test(ua)))document.getElementById('not-safari').style.display='block';
 </script>
 </body>
 </html>
