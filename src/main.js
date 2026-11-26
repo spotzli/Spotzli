@@ -168,14 +168,14 @@ function showSetup(user) {
   screen(`<h1 class="authtitle">Schön, dass du da bist!</h1>
   <p class="authsub">Wie heißt du? So sieht dich deine Partnerin oder dein Partner in Spotzi.</p>
   <div class="card authcard">
-    <div class="field"><label for="name">Dein Name</label><input class="inp" id="name" autocomplete="given-name" placeholder="z. B. Sevi"></div>
+    <div class="field"><label for="name">Dein Name</label><input class="inp" id="name" autocomplete="given-name" placeholder="z. B. Alex"></div>
     <div class="seg vseg" role="group" aria-label="Haushalt"><button type="button" data-mode="create" aria-pressed="true">Neu erstellen</button><button type="button" data-mode="join" aria-pressed="false">Einladungscode</button></div>
     <div id="create-box">
       <p class="hint" style="margin:0 0 10px">Du erstellst euren gemeinsamen Haushalt und bekommst einen Code für die zweite Person.</p>
-      <label class="check"><input type="checkbox" id="filmen" checked> Ich brauche die Kategorie „Filmen“</label>
+      <label class="check"><input type="checkbox" id="filmen"> Ich brauche die Kategorie „Filmen“</label>
     </div>
     <div id="join-box" hidden>
-      <div class="field"><label for="code">Einladungscode</label><input class="inp" id="code" autocapitalize="characters" placeholder="z. B. 4F2A9C" maxlength="6"></div>
+      <div class="field"><label for="code">Einladungscode</label><input class="inp" id="code" autocapitalize="characters" placeholder="z. B. K7M2Q9XH" maxlength="12"></div>
     </div>
     <button class="btn primary" id="go" style="margin-top:12px">Los geht's</button>
     <p class="authmsg" id="msg" role="status"></p>
@@ -200,8 +200,9 @@ function showSetup(user) {
       } else {
         const code = document.getElementById('code').value.trim();
         if (!code) throw new Error('Bitte gib den Einladungscode ein.');
-        const { error } = await supabase.rpc('join_household', { p_code: code, p_name: name });
+        const { data, error } = await supabase.rpc('join_household', { p_code: code, p_name: name });
         if (error) throw error;
+        if (data && data.error) throw new Error(data.error);
       }
       await boot();
     } catch (err) {
